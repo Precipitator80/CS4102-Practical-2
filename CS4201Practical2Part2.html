@@ -121,6 +121,12 @@
          //image.src = "textures/wood 01 Diffuse.jpg";
          //image.src = "textures/bricks.png";
          //image.src = "textures/bricks_text.png";
+         //image.src = "textures/gradient.png";
+         //image.src = "textures/gradient_vertical.png";
+         //image.src = "textures/CubeFaces.png";
+         //image.src = "textures/skybox-texture.jpg";
+         // image.src = "textures/dice_unwrap.png";
+         //image.src = "textures/dice_unwrap_square.png";
          gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
 
          let tex_buffer = gl.createBuffer();
@@ -187,15 +193,15 @@
          // (6 faces * 4 vertices)
 
          let [leftCol, rightCol, bottomCol, topCol, backCol, frontCol] = [
-            [1, 0, 0, 1],    // red
-            [1, 1, 0, 1],    // yellow 
-            [0, 0, 1, 1],    // blue 
-            [0, 1, 1, 1],    // cyan
-            [1, 0, 1, 1],    // purple
-            [1, 1, 1, 1],    // white            
+            [1, 0, 0, 1],    // First face - Left face - red
+            [1, 1, 0, 1],    // Second face - Right face - yellow 
+            [0, 0, 1, 1],    // Third face - Bottom face - blue 
+            [0, 1, 1, 1],    // Fourth face - Top face - cyan
+            [1, 0, 1, 1],    // Fifth face - Back face - purple
+            [1, 1, 1, 1],    // Sixth face - Front face - white            
          ];
 
-         let vertices = [     // 24 vertices defining the cube
+         let vertices = [     // 24 vertices defining the cube - Front and back modified to match camera.
             [left, bottom, back, 1], // First face - Left face
             [left, top, back, 1],
             [left, top, front, 1],
@@ -212,14 +218,14 @@
             [left, top, back, 1],
             [right, top, back, 1],
             [right, top, front, 1],
-            [right, bottom, back, 1], // Fifth face - Back face
-            [right, top, back, 1],
-            [left, top, back, 1],
-            [left, bottom, back, 1],
-            [left, bottom, front, 1], // Sixth face - Front face
-            [left, top, front, 1],
-            [right, top, front, 1],
-            [right, bottom, front, 1],
+            [left, bottom, -back, 1], // Fifth face - Back face
+            [left, top, -back, 1],
+            [right, top, -back, 1],
+            [right, bottom, -back, 1],
+            [right, bottom, -front, 1], // Sixth face - Front face
+            [right, top, -front, 1],
+            [left, top, -front, 1],
+            [left, bottom, -front, 1],
          ];
 
          // We still have 12 triangles, because we still have 6 faces (2 triangles per face)
@@ -243,13 +249,30 @@
          ];
 
          // One set of texture coordinates per face
+         let [xRange, yRange] = [2 * Math.abs(right - left) + 2 * Math.abs(front - back), Math.abs(top - bottom) + 2 * Math.abs(front - back)];
+
+         let x1 = 0;
+         let x2 = x1 + Math.abs(front - back) / xRange;
+         let x3 = x2 + Math.abs(right - left) / xRange;
+         let x4 = x3 + Math.abs(front - back) / xRange;
+         let x5 = 1;
+
+         let y1 = 0;
+         let y2 = Math.abs(front - back) / yRange;
+         let y3 = y2 + Math.abs(top - bottom) / yRange;
+         let y4 = 1;
+
+         console.log("Coords: " + x1 + "," + x2 + "," + x3 + "," + x4 + "," + x5);
+
+         // Working coordinates to match vertices for texture wrap.
+         // Reverse order of vertices plus flips for top and bottom.
          let texcoords = [
-            [0, 0], [0, 1], [1, 1], [1, 0],
-            [0, 0], [0, 1], [1, 1], [1, 0],
-            [0, 0], [0, 1], [1, 1], [1, 0],
-            [0, 0], [0, 1], [1, 1], [1, 0],
-            [0, 0], [0, 1], [1, 1], [1, 0],
-            [0, 0], [0, 1], [1, 1], [1, 0],
+            [x2, y2], [x2, y3], [x1, y3], [x1, y2], // Left
+            [x4, y2], [x4, y3], [x3, y3], [x3, y2], // Right
+            [x2, y2], [x2, y1], [x3, y1], [x3, y2], // Bottom
+            [x2, y4], [x2, y3], [x3, y3], [x3, y4], // Top
+            [x5, y2], [x5, y3], [x4, y3], [x4, y2], // Back
+            [x3, y2], [x3, y3], [x2, y3], [x2, y2], // Front
          ];
 
          // We define 24 colours (one colour per vertex). We group them by faces;
@@ -299,14 +322,14 @@
             [0, 1, 0, 0],
             [0, 1, 0, 0],
             [0, 1, 0, 0],
-            [0, 0, -1, 0], // Fifth face - Back face
-            [0, 0, -1, 0],
-            [0, 0, -1, 0],
-            [0, 0, -1, 0],
-            [0, 0, 1, 0], // Sixth face - Front face
+            [0, 0, 1, 0], // Fifth face - Back face
             [0, 0, 1, 0],
             [0, 0, 1, 0],
             [0, 0, 1, 0],
+            [0, 0, -1, 0], // Sixth face - Front face
+            [0, 0, -1, 0],
+            [0, 0, -1, 0],
+            [0, 0, -1, 0],
          ];
 
          return {
@@ -340,98 +363,6 @@
             indices: [...top.indices, ...leftLeg.indices, ...rightLeg.indices],
             normals: [...top.normals, ...leftLeg.normals, ...rightLeg.normals],
             texcoords: [...top.texcoords, ...leftLeg.texcoords, ...rightLeg.texcoords]
-         };
-      }
-
-      /**
-* Create a cylinder we can play with
-* 
-* @returns    object consisting of four matrices: vertices, colors, normals, and indices
-*/
-      function cylinder(height, radius, steps) {
-         // Define and store geometry
-
-         let color = [0, 0, 1, 1];
-         let vertices = [];
-         let indices = [];
-         let colors = [];
-         let normals = [];
-         let circle1 = [];
-         let circle2 = [];
-
-
-         let step = 2 * Math.PI / steps;
-         let angle = 0;
-
-         //make two circles
-         for (let i = 0; i <= steps; i++, angle += step) {
-            let x = radius * Math.cos(angle);
-            let y = height / 2;
-            let z = radius * Math.sin(angle);
-            circle1.push([x, y, z, 1]);
-            circle2.push([x, -y, z, 1]);
-         }
-         // make triangles
-         for (let i = 0; i < circle1.length - 1; i++) {
-            // vertices
-            let pt1 = circle1[i];
-            let pt2 = circle1[i + 1];
-            let pt3 = circle2[i];
-            let pt4 = circle2[i + 1];
-            vertices.push(pt1);
-            vertices.push(pt2);
-            vertices.push(pt3);
-            vertices.push(pt3);
-            vertices.push(pt2);
-            vertices.push(pt4);
-
-            // normals
-            let cross = [0, 0, 1, 0];
-            normals.push(cross);
-            normals.push(cross);
-            normals.push(cross);
-            normals.push(cross);
-            normals.push(cross);
-            normals.push(cross);
-
-            // indices
-            indices.push(i * 6, i * 6 + 1, i * 6 + 2);
-            indices.push(i * 6 + 3, i * 6 + 4, i * 6 + 5);
-         }
-
-         // make bottom and top
-         let start = vertices.length;
-         for (let i = 0; i < circle1.length; i++) {
-            vertices.push(circle1[i]);
-            normals.push([0, 0, 1, 0]);
-         }
-         for (let i = start; i < start + circle1.length - 2; i++) {
-            indices.push(i + 2);   // reverse order of vertices to face down
-            indices.push(i + 1);
-            indices.push(start);
-         }
-         start = vertices.length;
-         for (let i = 0; i < circle2.length; i++) {
-            vertices.push(circle2[i]);
-            normals.push([0, 0, 1, 0]);
-         }
-         for (let i = start; i < start + circle2.length - 2; i++) {
-            indices.push(start);
-            indices.push(i + 1);
-            indices.push(i + 2);
-         }
-
-         // make colours
-         for (let i = 0; i < vertices.length; i++) {
-            colors.push(color);
-         }
-         // make normals
-
-         return {
-            vertices: vertices,
-            colors: colors,
-            indices: indices,
-            normals: normals
          };
       }
    </script>
@@ -479,7 +410,7 @@
                      lowp vec4 t = texture2D(uTexture, vTexCoord);
                       gl_FragColor = vec4(t.rgb * vLighting, 255);
                   }
-                  `;  
+                  `; 
    </script>
 
    <script>
@@ -499,7 +430,7 @@
       //mat4.perspective(P, Math.PI / 2, canvas.width / canvas.height, .01, 10);
 
       // Create object one -- a scaled and translated cube
-      let object1 = bench();
+      let object1 = bench(); //cube();
       console.log(object1);
 
       let M1_model = mat4.create();
@@ -524,6 +455,7 @@
       let objects = [buffers1];
       // let directions = [[0.01, 0.05, 0.02]];
       let directions = [[0.0, 0.05, 0.0]];
+      //let directions = [[-0.05, 0.0, 0.0]];
 
       let M = mat4.create();
       let R = mat4.create();
