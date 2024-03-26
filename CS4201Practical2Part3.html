@@ -138,6 +138,56 @@
          gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, index_buffer);
          gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
 
+         // ENVIRONMENT MAP
+         // Create and store data into environment texture buffer
+         let environmentTexture = gl.createTexture();
+         gl.bindTexture(gl.TEXTURE_CUBE_MAP, environmentTexture);
+
+         // Load each face of the cube map
+         const faces = [
+            'textures/bluecloud_rt.jpg',
+            'textures/bluecloud_lf.jpg',
+            'textures/bluecloud_up.jpg',
+            'textures/bluecloud_dn.jpg',
+            'textures/bluecloud_ft.jpg',
+            'textures/bluecloud_bk.jpg'
+         ];
+
+         faces.forEach((src, index) => {
+            const image = new Image();
+            image.addEventListener("load", function () {
+               gl.bindTexture(gl.TEXTURE_CUBE_MAP, environmentTexture);
+               gl.texImage2D(gl.TEXTURE_CUBE_MAP_POSITIVE_X + index, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+               if (index === 5) { // If it's the last face, generate mipmaps
+                  gl.generateMipmap(gl.TEXTURE_CUBE_MAP);
+               }
+            });
+            image.src = src;
+         });
+
+         // Get the uniform location for the textures
+         //const uTextureLocation = gl.getUniformLocation(shaderprogram, "uTexture");
+         //const uReflectionsTextureLocation = gl.getUniformLocation(shaderprogram, "uReflectionsTexture");
+
+         //gl.uniform1i(uTextureLocation, 0); // Assuming texture unit 0 is used for the base texture
+         //gl.uniform1i(uReflectionsTextureLocation, 1); // Assuming texture unit 1 is used for the cube map texture
+
+         // Get the uniform locations for the sampler uniforms
+         const uTextureLocation = gl.getUniformLocation(shaderprogram, "uTexture");
+         const uReflectionsTextureLocation = gl.getUniformLocation(shaderprogram, "uReflectionsTexture");
+
+         // Bind the base texture to texture unit 0
+         gl.activeTexture(gl.TEXTURE0);
+         gl.bindTexture(gl.TEXTURE_2D, texture); // Assume baseTexture is your 2D texture
+         gl.uniform1i(uTextureLocation, 0); // Set the texture unit for uTexture
+
+         // Bind the cube map texture to texture unit 1
+         gl.activeTexture(gl.TEXTURE1);
+         gl.bindTexture(gl.TEXTURE_CUBE_MAP, environmentTexture); // Assume cubeMapTexture is your cube map texture
+         gl.uniform1i(uReflectionsTextureLocation, 1); // Set the texture unit for uReflectionsTexture
+
+
+
          return {
             vertex_buffer: vertex_buffer,
             color_buffer: color_buffer,
@@ -370,32 +420,37 @@
    <script>
       // GLSL shader code
       // Note that uPerspectiveMatrix, uModelMatrix and uViewMatrix now multiply aPosition
-      // An attempt was made using this:
+      // An attempt was made using these resources:
       // WebGL SkyBox - WebGL Fundamentals - https://webglfundamentals.org/webgl/lessons/webgl-skybox.html - Accessed 25.03.2024
+      // Environment Mapping - Cem Yuksel - https://youtu.be/PeAvKApuAuA - Accessed 26.03.2024
+      // Reflections - Cem Yuksel - https://youtu.be/h2RTBs1xl6w - Accessed 26.03.2024
       const vertCode = `
+                  // The position, colour and normal of the vertex.
                   attribute vec4 aPosition;
                   attribute vec4 aColor;
                   attribute vec4 aNormal;
                   attribute vec2 aTexCoord;
       
+                  // The model, view, perspective and normal matrices to apply transformations.
                   uniform mat4 uModelMatrix;
                   uniform mat4 uViewMatrix;
                   uniform mat4 uPerspectiveMatrix;
                   uniform mat4 uNormalMatrix;
       
+                  // The colour, lighting and texture coordinate of the vertex.
                   varying vec4 vColor;
                   varying vec3 vLighting;
                   varying vec2 vTexCoord;
 
+                  // Vectors to pass along to the fragment shader.
                   varying vec3 vModelPosition;
                   varying vec3 vModelNormal;
-                  varying vec3 directionalVector;
                   void main() {
                      gl_Position = uPerspectiveMatrix * uViewMatrix * uModelMatrix * aPosition;
                      
-                     highp vec3 ambientLight = vec3(0.3, 0.3, 0.3);
+                     highp vec3 ambientLight = vec3(0.8,0.8,0.8);
                      highp vec3 directionalColor = vec3(1, 1, 1);
-                     directionalVector = normalize(vec3(0.85, 0.8, 0.75));
+                     highp vec3 directionalVector = normalize(vec3(0.85, 0.8, 0.75));
                      highp vec4 transformedNormal = uNormalMatrix * aNormal;
       
                      highp float directional = max(dot(transformedNormal.xyz, directionalVector), 0.0);
@@ -408,7 +463,7 @@
                      vModelPosition = (uModelMatrix * aPosition).xyz;
 
                      // orient the normals and pass to the fragment shader
-                     //vModelNormal = mat3(uModelMatrix) * aNormal;
+                     vModelNormal = mat3(uModelMatrix) * vec3(aNormal);
                   }
                   `;
 
@@ -420,26 +475,35 @@
 
                   // Passed in from the vertex shader.
                   varying vec3 vModelPosition;
-                  //varying vec3 vModelNormal;
-                  uniform mat4 uNormalMatrix;
-                  varying vec3 directionalVector;
+                  varying vec3 vModelNormal;
 
                   // The texture.
-                  uniform sampler2D uTexture;
+                  uniform sampler2D uTexture; // Base texture.
+                  uniform samplerCube uReflectionsTexture; // Reflections texture.
 
                   // The position of the camera.
                   uniform vec3 uModelCameraPosition;
                   void main() {
-                     //vec3 modelNormal = normalize(vModelNormal);
-                     //vec3 eyeToSurfaceDir = normalize(vModelPosition - uModelCameraPosition);
-                     //vec3 direction = reflect(eyeToSurfaceDir,modelNormal);
-                     //gl_FragColor = textureCube(uTexture, direction);
-                     
-                     //vec3 modelNormal = normalize(mat3(uNormalMatrix));
-                     //gl_FragColor = textureCube(uTexture, directionalVector);
+                     vec3 modelNormal = normalize(vModelNormal);
+                     vec3 eyeToSurfaceDir = normalize(vModelPosition - uModelCameraPosition);
 
-                     lowp vec4 t = texture2D(uTexture, vTexCoord);
-                      gl_FragColor = vec4(t.rgb * vLighting, 255);
+                     // Calculate reflection vector
+                     vec3 reflectionDir = reflect(eyeToSurfaceDir, modelNormal);
+
+                     // Sample reflections texture
+                     lowp vec4 reflectionsColor = textureCube(uReflectionsTexture, reflectionDir);
+
+                     // Sample base texture
+                     lowp vec4 baseColor = texture2D(uTexture, vTexCoord);
+                     
+                     // Combine base color with reflections color
+                     vec4 finalColor = mix(baseColor, reflectionsColor, 0.5); // You can adjust the blend factor as needed
+
+                     // Apply lighting
+                     gl_FragColor = vec4(finalColor.rgb * vLighting, finalColor.a);
+
+                     //gl_FragColor = vec4(reflectionsColor.rgb * vLighting, 255);
+                     //gl_FragColor = vec4(baseColor.rgb * vLighting, 255);
                   }
                   `; 
    </script>
@@ -485,7 +549,7 @@
 
       let objects = [buffers1];
       // let directions = [[0.01, 0.05, 0.02]];
-      let directions = [[0.0, 0.05, 0.0]];
+      let directions = [[0.05, 0.05, 0.0]];
       //let directions = [[-0.05, 0.0, 0.0]];
 
       let M = mat4.create();
@@ -518,8 +582,22 @@
             let NormLoc = gl.getUniformLocation(shaderprogram, "uNormalMatrix");
             gl.uniformMatrix4fv(NormLoc, false, new Float32Array(Norm));
 
+            // Invert the view matrix to get the transformation from view space to world space
+            let M_camera = mat4.create();
+            mat4.invert(M_camera, M_view);
+
+            // Transform the camera position from view space to world space
+            let cameraPositionWorldSpace = vec3.create();
+            vec3.transformMat4(cameraPositionWorldSpace, [0, 0, 0], M_camera);
+            //console.log("This is world space: " + cameraPositionWorldSpace);
+            //console.log("This is the camera matrix: " + M_camera);
+
+            // Set the value of uModelCameraPosition uniform in the shader program
+            let ModelCameraLoc = gl.getUniformLocation(shaderprogram, "uModelCameraPosition");
+            gl.uniform3f(ModelCameraLoc, cameraPositionWorldSpace[0], cameraPositionWorldSpace[1], cameraPositionWorldSpace[2]);
+
             //let ModelCameraLoc = gl.getUniformLocation(shaderprogram, "uModelCameraMatrix");
-            //gl.uniformMatrix4fv(ModelCameraLoc, false, new Float32Array(M_view));
+            //gl.uniformMatrix4fv(ModelCameraLoc, false, new Float32Array(M_camera));
 
             drawObject(objects[i], shaderprogram);
          }
