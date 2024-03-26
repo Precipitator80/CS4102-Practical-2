@@ -487,16 +487,161 @@
       let M_view = mat4.create();
       //mat4.lookAt(M_view, [0, 0.75, 1], [0, 0, 0], [0, 1, 0]);
 
-      // Create a perspective matrix. glMatrix helps us here with perspective function
-      let P = mat4.create();
-      //mat4.perspective(P, Math.PI / 2, canvas.width / canvas.height, .01, 10);
-
       // Create object one -- a scaled and translated cube
       let object1 = bench(); //cube();
       console.log(object1);
 
+      function bounds(vertices) {
+
+         // Initialize min and max coordinates with the first vertex
+         let minX = vertices[0][0];
+         let minY = vertices[0][1];
+         let minZ = vertices[0][2];
+         let maxX = vertices[0][0];
+         let maxY = vertices[0][1];
+         let maxZ = vertices[0][2];
+
+         // Iterate through the vertices to find min and max coordinates
+         for (let i = 1; i < vertices.length; i++) {
+            let vertex = vertices[i];
+            minX = Math.min(minX, vertex[0]);
+            minY = Math.min(minY, vertex[1]);
+            minZ = Math.min(minZ, vertex[2]);
+            maxX = Math.max(maxX, vertex[0]);
+            maxY = Math.max(maxY, vertex[1]);
+            maxZ = Math.max(maxZ, vertex[2]);
+         }
+
+         return {
+            left: minX,
+            right: maxX,
+            bottom: minY,
+            top: maxY,
+            near: minZ,
+            far: maxZ
+         };
+      }
+
+      let b = bounds(object1.vertices);
+      console.log(b);
+
+      // Create a perspective matrix. glMatrix helps us here with perspective function
+      let theta = 2;//Math.PI / 6;
+      let phi = -Math.PI / 2.5;//Math.PI / 12;
+
+      // Oblique Projections - Edward Angel - https://www.cs.unm.edu/~angel/AW/chap05d.pdf - Accessed 26.03.2024
+      let h = mat4.create();
+      mat4.set(h,
+         1, 0, -1 / Math.tan(theta), 0,
+         0, 1, -1 / Math.tan(phi), 0,
+         0, 0, 1, 0,
+         0, 0, 0, 1);
+      let st = mat4.create();
+      mat4.set(st,
+         2 / (b.right - b.left), 0, 0, - (b.right + b.left) / (b.right - b.left),
+         0, 2 / (b.top - b.bottom), 0, -(b.top + b.bottom) / (b.top - b.bottom),
+         0, 0, 2 / (b.far - b.near), (b.far + b.near) / (b.near - b.far),
+         0, 0, 0, 1
+      );
+      let mOrth = mat4.create();
+      mat4.set(mOrth,
+         1, 0, 0, 0,
+         0, 1, 0, 0,
+         0, 0, 0.01, 0,
+         0, 0, 0, 1
+      );
+
+      // WebGl - Oblique projection - LJ - https://stackoverflow.com/questions/29131729/webgl-oblique-projection - Accessed 26.03.2024
+      mat4.oblique = function (pMtrx, theta, phi) {
+         if (!pMtrx) {
+            pMtrx = mat4.createMatrix();
+         }
+         //var t = theta * Math.PI / 180;//degreesToRadians(theta);
+         //var p = phi * Math.PI / 180;//degreesToRadians(phi);
+         var cotT = -1 / Math.tan(theta);
+         var cotP = -1 / Math.tan(phi);
+
+         pMtrx[0] = 1;
+         pMtrx[1] = 0;
+         pMtrx[2] = cotT;
+         pMtrx[3] = 0;
+         pMtrx[4] = 0;
+         pMtrx[5] = 1;
+         pMtrx[6] = cotP;
+         pMtrx[7] = 0;
+         pMtrx[8] = 0;
+         pMtrx[9] = 0;
+         pMtrx[10] = 1;
+         pMtrx[11] = 0;
+         pMtrx[12] = 0
+         pMtrx[13] = 0
+         pMtrx[14] = 0
+         pMtrx[15] = 1;
+
+         mat4.transpose(pMtrx, pMtrx);
+
+         return pMtrx;
+      }
+
+      mat4.ortho = function (left, right, bottom, top, near, far, pMtrx) {
+         if (!pMtrx) {
+            pMtrx = mat4.createMatrix();
+         }
+         var a = right - left;
+         b = top - bottom;
+         c = far - near;
+
+         pMtrx[0] = 2 / a;
+         pMtrx[1] = 0;
+         pMtrx[2] = 0;
+         pMtrx[3] = 0;
+         pMtrx[4] = 0;
+         pMtrx[5] = 2 / b;
+         pMtrx[6] = 0;
+         pMtrx[7] = 0;
+         pMtrx[8] = 0;
+         pMtrx[9] = 0;
+         pMtrx[10] = -2 / c;
+         pMtrx[11] = 0;
+         pMtrx[12] = -1 * (left + right) / a;
+         pMtrx[13] = -1 * (top + bottom) / b;
+         pMtrx[14] = -1 * (far + near) / c;
+         pMtrx[15] = 1;
+
+         return pMtrx;
+      };
+
+
+      let P = mat4.create();
+      // mat4.set(P,
+      //    1, 0, 1 / Math.tan(theta), 0,
+      //    0, 1, 1 / Math.tan(phi), 0,
+      //    0, 0, 0.01, 0,
+      //    0, 0, 0, 1);
+      // mat4.set(P,
+      //    1, 1 / Math.tan(2), 0, 0,
+      //    0, 1, 0, 0,
+      //    0, -1 / Math.tan(2), 1, 0,
+      //    0, 0, 0, 1); // Just some weird shearing but closest to something that looks right.
+      // mat4.set(P,
+      //    2 / (b.left - b.right), 0, 0, -(b.left + b.right) / (b.left - b.right),
+      //    0, 2 / (b.top - b.bottom), 0, -(b.top + b.bottom) / (b.top - b.bottom),
+      //    0, 0, -2 / (b.far - b.near), (b.far + b.near) / (b.far - b.near),
+      //    0, 0, 0, 1); // Orthogonal projection
+      // mat4.multiply(P, st, h);
+      // mat4.multiply(P, mOrth, P);
+
+      var oblique = mat4.create();
+      var ortho = mat4.create();
+      mat4.oblique(P, theta, phi);
+      //mat4.ortho(-2.0, 2.0, -2.0, 2.0, 0.1, 100, ortho);
+      //mat4.multiply(P, oblique, ortho);
+
+      console.log("Projection matrix: " + P);
+      //mat4.perspective(P, Math.PI / 2, canvas.width / canvas.height, .01, 10);
+
       let M1_model = mat4.create();
-      mat4.fromScaling(M1_model, [1, 1, 1]);
+      //mat4.fromScaling(M1_model, [0.35, 0.35, 0.35]);
       //mat4.translate(M1_model, M1_model, [0.2, 0.0, .3]);
 
       // Tell WebGL to use M_view as the GLSL uniform uViewMatrix
@@ -515,9 +660,10 @@
       //mat4.rotateX(buffers1.model, buffers1.model, 2);
 
       let objects = [buffers1];
-      // let directions = [[0.01, 0.05, 0.02]];
-      let directions = [[0.0, 0.05, 0.0]];
-      //let directions = [[-0.05, 0.0, 0.0]];
+      let xr = 0;//-0.05;//0.01;
+      let yr = 0.05;//0;
+      let zr = 0;//0.02;
+      let directions = [[xr, yr, zr]]
 
       let M = mat4.create();
       let R = mat4.create();
