@@ -145,12 +145,12 @@
 
          // Load each face of the cube map
          const faces = [
-            'textures/bluecloud_rt.jpg',
-            'textures/bluecloud_lf.jpg',
-            'textures/bluecloud_up.jpg',
-            'textures/bluecloud_dn.jpg',
-            'textures/bluecloud_ft.jpg',
-            'textures/bluecloud_bk.jpg'
+            'textures/lightcloud_rt.jpg',
+            'textures/lightcloud_lf.jpg',
+            'textures/lightcloud_up.jpg',
+            'textures/lightcloud_dn.jpg',
+            'textures/lightcloud_ft.jpg',
+            'textures/lightcloud_bk.jpg'
          ];
 
          faces.forEach((src, index) => {
@@ -525,7 +525,7 @@
       //mat4.perspective(P, Math.PI / 2, canvas.width / canvas.height, .01, 10);
 
       // Create object one -- a scaled and translated cube
-      let object1 = cube(); //bench();
+      let object1 = bench(); //cube(); 
       console.log(object1);
 
       let M1_model = mat4.create();
@@ -549,7 +549,7 @@
 
       let objects = [buffers1];
       // let directions = [[0.01, 0.05, 0.02]];
-      let directions = [[0.05, 0.05, 0.0]];
+      let directions = [[-0.025, 0.05, 0.0]];
       //let directions = [[-0.05, 0.0, 0.0]];
 
       let M = mat4.create();
