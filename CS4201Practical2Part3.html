@@ -3,510 +3,19 @@
 <html>
 
 <body>
-   <canvas width="512" height="512" id="gl-canvas">
+   <canvas width="768" height="768" id="gl-canvas">
       Sorry; your web browser does not support HTML5’s canvas element.
    </canvas>
 
    <script src="https://cdnjs.cloudflare.com/ajax/libs/gl-matrix/2.8.1/gl-matrix-min.js"
       type="text/javascript"></script>
-   <script>
-
-      /**
-       * This function initialises GL and the viewport.
-       */
-      function glInit() {
-         // Initialise and clear viewport
-         gl.clearColor(0.1, 0.1, 0.1, 0.9);
-         gl.clearDepth(1.0);
-         gl.viewport(0.0, 0.0, canvas.width, canvas.height);
-         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-         gl.enable(gl.DEPTH_TEST);
-      }
-
-      /**
-       * This function draws an object using the supplied shader program
-       * 
-       * @param   bufferObject   An object returned by initObject
-       * @param   shaderprogram  a shader program returned by createProgram
-       */
-      function drawObject(bufferObject, shaderprogram) {
-         gl.useProgram(shaderprogram);
-
-         let vertex_buffer = bufferObject.vertex_buffer;
-         let color_buffer = bufferObject.color_buffer;
-         let normal_buffer = bufferObject.normal_buffer;
-         let index_buffer = bufferObject.index_buffer;
-         let tex_buffer = bufferObject.tex_buffer;
-         let number = bufferObject.numVertices;
-
-         // Bind buffers
-         gl.bindBuffer(gl.ARRAY_BUFFER, vertex_buffer);
-         let aPosition = gl.getAttribLocation(shaderprogram, "aPosition");
-         gl.vertexAttribPointer(aPosition, 4, gl.FLOAT, false, 0, 0);
-         gl.enableVertexAttribArray(aPosition);
-
-         gl.bindBuffer(gl.ARRAY_BUFFER, color_buffer);
-         let aColor = gl.getAttribLocation(shaderprogram, "aColor");
-         gl.vertexAttribPointer(aColor, 4, gl.FLOAT, false, 0, 0);
-         gl.enableVertexAttribArray(aColor);
-
-         gl.bindBuffer(gl.ARRAY_BUFFER, normal_buffer);
-         let aNormal = gl.getAttribLocation(shaderprogram, "aNormal");
-         gl.vertexAttribPointer(aNormal, 4, gl.FLOAT, false, 0, 0);
-         gl.enableVertexAttribArray(aNormal);
-
-         let aTexCoord = gl.getAttribLocation(shaderprogram, "aTexCoord");
-         gl.bindBuffer(gl.ARRAY_BUFFER, tex_buffer);
-         gl.vertexAttribPointer(aTexCoord, 2, gl.FLOAT, false, 0, 0);
-         gl.enableVertexAttribArray(aTexCoord);
-
-         // Draw elements as triangles
-         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, index_buffer);
-         gl.drawElements(gl.TRIANGLES, number, gl.UNSIGNED_SHORT, 0);
-      }
-
-      /**
-       * This function initialises an object. It uploads all its arrays to the GPU
-       * and records the references to each. We can then pass this object to drawObject
-       * which will bind the arrays appropriately
-       * 
-       * @param   object         An object containing arrays for vertices, colors, normals, and indices
-       * @param   shaderprogram  a shader program returned by createProgram
-       */
-      function initObject(object, shaderprogram) {
-         gl.useProgram(shaderprogram);
-
-         // Vertices, colors and indices arrive in the form of 2D matrix objects for ease of manipulation
-         // We need to flatten them and convert them to JS arrays before passing them to WebGL
-         let vertices = object.vertices.flat();
-         let colors = object.colors.flat();
-         let indices = object.indices.flat();
-         let normals = object.normals.flat();
-         let texcoords = object.texcoords.flat();
-
-         // Create and store data into vertex buffer
-         let vertex_buffer = gl.createBuffer();
-         gl.bindBuffer(gl.ARRAY_BUFFER, vertex_buffer);
-         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
-
-         // Create and store data into color buffer
-         let color_buffer = gl.createBuffer();
-         gl.bindBuffer(gl.ARRAY_BUFFER, color_buffer);
-         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
-
-         // Create and store data into color buffer
-         let normal_buffer = gl.createBuffer();
-         gl.bindBuffer(gl.ARRAY_BUFFER, normal_buffer);
-         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(normals), gl.STATIC_DRAW);
-
-         // Create and store data into texture buffer
-         let texture = gl.createTexture();
-         gl.bindTexture(gl.TEXTURE_2D, texture);
-         // Fill with a single pixel so we can start rendering. This is standard approach in WebGL
-         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([127, 127, 255, 255]));
-
-         // load image
-         var image = new Image();
-
-         // This is a typical JavaScript sort of code. We need to wait for the texture to be loaded before proceeding.
-         // we accomplish this by providing a callback function to be invoked once loading is done.
-         // In a JavaScript-style, we do this inline
-         image.addEventListener("load", function () {
-            gl.bindTexture(gl.TEXTURE_2D, texture);
-            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
-            gl.generateMipmap(gl.TEXTURE_2D);
-         });
-
-         image.src = "textures/marble10 diffuse 1k.jpg";
-         //image.src = "textures/wood 01 Diffuse.jpg";
-         //image.src = "textures/bricks.png";
-         //image.src = "textures/bricks_text.png";
-         //image.src = "textures/gradient.png";
-         //image.src = "textures/gradient_vertical.png";
-         //image.src = "textures/CubeFaces.png";
-         //image.src = "textures/skybox-texture.jpg";
-         // image.src = "textures/dice_unwrap.png";
-         //image.src = "textures/dice_unwrap_square.png";
-         gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
-
-         let tex_buffer = gl.createBuffer();
-         gl.bindBuffer(gl.ARRAY_BUFFER, tex_buffer);
-         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(texcoords), gl.STATIC_DRAW);
-
-         // Create and store data into index buffer
-         let index_buffer = gl.createBuffer();
-         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, index_buffer);
-         gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
-
-         // ENVIRONMENT MAP
-         // Create and store data into environment texture buffer
-         let environmentTexture = gl.createTexture();
-         gl.bindTexture(gl.TEXTURE_CUBE_MAP, environmentTexture);
-
-         // Load each face of the cube map
-         const faces = [
-            'textures/lightcloud_rt.jpg',
-            'textures/lightcloud_lf.jpg',
-            'textures/lightcloud_up.jpg',
-            'textures/lightcloud_dn.jpg',
-            'textures/lightcloud_ft.jpg',
-            'textures/lightcloud_bk.jpg'
-         ];
-
-         faces.forEach((src, index) => {
-            const image = new Image();
-            image.addEventListener("load", function () {
-               gl.bindTexture(gl.TEXTURE_CUBE_MAP, environmentTexture);
-               gl.texImage2D(gl.TEXTURE_CUBE_MAP_POSITIVE_X + index, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
-               if (index === 5) { // If it's the last face, generate mipmaps
-                  gl.generateMipmap(gl.TEXTURE_CUBE_MAP);
-               }
-            });
-            image.src = src;
-         });
-
-         // Get the uniform location for the textures
-         //const uTextureLocation = gl.getUniformLocation(shaderprogram, "uTexture");
-         //const uReflectionsTextureLocation = gl.getUniformLocation(shaderprogram, "uReflectionsTexture");
-
-         //gl.uniform1i(uTextureLocation, 0); // Assuming texture unit 0 is used for the base texture
-         //gl.uniform1i(uReflectionsTextureLocation, 1); // Assuming texture unit 1 is used for the cube map texture
-
-         // Get the uniform locations for the sampler uniforms
-         const uTextureLocation = gl.getUniformLocation(shaderprogram, "uTexture");
-         const uReflectionsTextureLocation = gl.getUniformLocation(shaderprogram, "uReflectionsTexture");
-
-         // Bind the base texture to texture unit 0
-         gl.activeTexture(gl.TEXTURE0);
-         gl.bindTexture(gl.TEXTURE_2D, texture); // Assume baseTexture is your 2D texture
-         gl.uniform1i(uTextureLocation, 0); // Set the texture unit for uTexture
-
-         // Bind the cube map texture to texture unit 1
-         gl.activeTexture(gl.TEXTURE1);
-         gl.bindTexture(gl.TEXTURE_CUBE_MAP, environmentTexture); // Assume cubeMapTexture is your cube map texture
-         gl.uniform1i(uReflectionsTextureLocation, 1); // Set the texture unit for uReflectionsTexture
-
-
-
-         return {
-            vertex_buffer: vertex_buffer,
-            color_buffer: color_buffer,
-            normal_buffer: normal_buffer,
-            index_buffer: index_buffer,
-            tex_buffer: tex_buffer,
-            numVertices: indices.length
-         };
-      }
-
-      /**
-       * This function compiles the supplied vertex and fragment shaders into a program
-       * 
-       * @param   vertCode  Vertex shader code, written in GLSL
-       * @param   fragCode  Fragment shader code, written in GLSL
-       * 
-       * @returns    Shader program
-       */
-      function createProgram(vertCode, fragCode) {
-         // Compile and upload shader programs
-         let vertShader = gl.createShader(gl.VERTEX_SHADER);
-         gl.shaderSource(vertShader, vertCode);
-         gl.compileShader(vertShader);
-
-         let fragShader = gl.createShader(gl.FRAGMENT_SHADER);
-         gl.shaderSource(fragShader, fragCode);
-         gl.compileShader(fragShader);
-
-         let shaderprogram = gl.createProgram();
-         gl.attachShader(shaderprogram, vertShader);
-         gl.attachShader(shaderprogram, fragShader);
-         gl.linkProgram(shaderprogram);
-
-         gl.useProgram(shaderprogram);
-
-         return shaderprogram;
-      }
-   </script>
-   <script>
-      /**
-       * Create a cube we can play with
-       * 
-       * @returns    object consisting of three matrices: vertices, colors and indices
-       */
-      function cube() {
-         return cuboid(-0.5, 0.5, -0.5, 0.5, -0.5, 0.5);
-      }
-
-      function cuboid(left, right, bottom, top, back, front) {
-         // Define and store geometry
-         // We use 4 vertices per face below. We duplicate vertices so each
-         // face has its own 4 vertices. This means 24 vertices below
-         // (6 faces * 4 vertices)
-
-         let [leftCol, rightCol, bottomCol, topCol, backCol, frontCol] = [
-            [1, 0, 0, 1],    // First face - Left face - red
-            [1, 1, 0, 1],    // Second face - Right face - yellow 
-            [0, 0, 1, 1],    // Third face - Bottom face - blue 
-            [0, 1, 1, 1],    // Fourth face - Top face - cyan
-            [1, 0, 1, 1],    // Fifth face - Back face - purple
-            [1, 1, 1, 1],    // Sixth face - Front face - white            
-         ];
-
-         let vertices = [     // 24 vertices defining the cube - Front and back modified to match camera.
-            [left, bottom, back, 1], // First face - Left face
-            [left, top, back, 1],
-            [left, top, front, 1],
-            [left, bottom, front, 1],
-            [right, bottom, front, 1], // Second face - Right face
-            [right, top, front, 1],
-            [right, top, back, 1],
-            [right, bottom, back, 1],
-            [left, bottom, back, 1], // Third face - Bottom face
-            [left, bottom, front, 1],
-            [right, bottom, front, 1],
-            [right, bottom, back, 1],
-            [left, top, front, 1], // Fourth face - Top face
-            [left, top, back, 1],
-            [right, top, back, 1],
-            [right, top, front, 1],
-            [left, bottom, -back, 1], // Fifth face - Back face
-            [left, top, -back, 1],
-            [right, top, -back, 1],
-            [right, bottom, -back, 1],
-            [right, bottom, -front, 1], // Sixth face - Front face
-            [right, top, -front, 1],
-            [left, top, -front, 1],
-            [left, bottom, -front, 1],
-         ];
-
-         // We still have 12 triangles, because we still have 6 faces (2 triangles per face)
-         // The difference from previous example is that indices go to 23 (because we have
-         // 24 vertices in total and faces do not share vertices anymore)
-         // Note -- it is tricky to get this right by hand!  
-
-         let indices = [
-            [0, 1, 2],
-            [0, 2, 3],
-            [4, 5, 6],
-            [4, 6, 7],
-            [8, 9, 10],
-            [8, 10, 11],
-            [12, 13, 14],
-            [12, 14, 15],
-            [16, 17, 18],
-            [16, 18, 19],
-            [20, 21, 22],
-            [20, 22, 23],
-         ];
-
-         // One set of texture coordinates per face
-         let [xRange, yRange] = [2 * Math.abs(right - left) + 2 * Math.abs(front - back), Math.abs(top - bottom) + 2 * Math.abs(front - back)];
-
-         let x1 = 0;
-         let x2 = x1 + Math.abs(front - back) / xRange;
-         let x3 = x2 + Math.abs(right - left) / xRange;
-         let x4 = x3 + Math.abs(front - back) / xRange;
-         let x5 = 1;
-
-         let y1 = 0;
-         let y2 = Math.abs(front - back) / yRange;
-         let y3 = y2 + Math.abs(top - bottom) / yRange;
-         let y4 = 1;
-
-         console.log("Coords: " + x1 + "," + x2 + "," + x3 + "," + x4 + "," + x5);
-
-         // Working coordinates to match vertices for texture wrap.
-         // Reverse order of vertices plus flips for top and bottom.
-         let texcoords = [
-            [x2, y2], [x2, y3], [x1, y3], [x1, y2], // Left
-            [x4, y2], [x4, y3], [x3, y3], [x3, y2], // Right
-            [x2, y2], [x2, y1], [x3, y1], [x3, y2], // Bottom
-            [x2, y4], [x2, y3], [x3, y3], [x3, y4], // Top
-            [x5, y2], [x5, y3], [x4, y3], [x4, y2], // Back
-            [x3, y2], [x3, y3], [x2, y3], [x2, y2], // Front
-         ];
-
-         // We define 24 colours (one colour per vertex). We group them by faces;
-         // sets of four vertices belonging to the same face get the same colour   
-
-         let colors = [
-            leftCol,
-            leftCol,
-            leftCol,
-            leftCol,
-            rightCol,
-            rightCol,
-            rightCol,
-            rightCol,
-            bottomCol,
-            bottomCol,
-            bottomCol,
-            bottomCol,
-            topCol,
-            topCol,
-            topCol,
-            topCol,
-            backCol,
-            backCol,
-            backCol,
-            backCol,
-            frontCol,
-            frontCol,
-            frontCol,
-            frontCol
-         ];
-
-         let normals = [     // 24 vertices defining the cube
-            [-1, 0, 0, 0], // First face - Left face
-            [-1, 0, 0, 0],
-            [-1, 0, 0, 0],
-            [-1, 0, 0, 0],
-            [1, 0, 0, 0], // Second face - Right face
-            [1, 0, 0, 0],
-            [1, 0, 0, 0],
-            [1, 0, 0, 0],
-            [0, -1, 0, 0], // Third face - Bottom face
-            [0, -1, 0, 0],
-            [0, -1, 0, 0],
-            [0, -1, 0, 0],
-            [0, 1, 0, 0], // Fourth face - Top face
-            [0, 1, 0, 0],
-            [0, 1, 0, 0],
-            [0, 1, 0, 0],
-            [0, 0, 1, 0], // Fifth face - Back face
-            [0, 0, 1, 0],
-            [0, 0, 1, 0],
-            [0, 0, 1, 0],
-            [0, 0, -1, 0], // Sixth face - Front face
-            [0, 0, -1, 0],
-            [0, 0, -1, 0],
-            [0, 0, -1, 0],
-         ];
-
-         return {
-            vertices: vertices,
-            colors: colors,
-            indices: indices,
-            normals: normals,
-            texcoords: texcoords
-         };
-      }
-
-      function bench() {
-         let [xExtent, yExtent, zExtent] = [0.5, 0.125, 0.25]
-         let top = cuboid(-xExtent, xExtent, -yExtent, yExtent, -zExtent, zExtent);
-         let leftLeg = cuboid(-xExtent + xExtent / 6, -xExtent + xExtent / 2, -3 * yExtent, -yExtent, -0.8 * zExtent, 0.8 * zExtent);
-         let rightLeg = cuboid(xExtent - xExtent / 2, xExtent - xExtent / 6, -3 * yExtent, -yExtent, -0.8 * zExtent, 0.8 * zExtent);
-
-         // Increment indices in leftLeg using the top vertices as an offset.
-         const leftLegOffset = top.vertices.length;
-         leftLeg.indices = leftLeg.indices.map(index =>
-            [index[0] + leftLegOffset, index[1] + leftLegOffset, index[2] + leftLegOffset]);
-
-         // Increment indices in rightLeg using the other two sets of vertices as an offset.
-         const rightLegOffset = top.vertices.length + leftLeg.vertices.length;
-         rightLeg.indices = rightLeg.indices.map(index =>
-            [index[0] + rightLegOffset, index[1] + rightLegOffset, index[2] + rightLegOffset]);
-
-         return {
-            vertices: [...top.vertices, ...leftLeg.vertices, ...rightLeg.vertices],
-            colors: [...top.colors, ...leftLeg.colors, ...rightLeg.colors],
-            indices: [...top.indices, ...leftLeg.indices, ...rightLeg.indices],
-            normals: [...top.normals, ...leftLeg.normals, ...rightLeg.normals],
-            texcoords: [...top.texcoords, ...leftLeg.texcoords, ...rightLeg.texcoords]
-         };
-      }
-   </script>
-
-   <script>
-      // GLSL shader code
-      // Note that uPerspectiveMatrix, uModelMatrix and uViewMatrix now multiply aPosition
-      // An attempt was made using these resources:
-      // WebGL SkyBox - WebGL Fundamentals - https://webglfundamentals.org/webgl/lessons/webgl-skybox.html - Accessed 25.03.2024
-      // Environment Mapping - Cem Yuksel - https://youtu.be/PeAvKApuAuA - Accessed 26.03.2024
-      // Reflections - Cem Yuksel - https://youtu.be/h2RTBs1xl6w - Accessed 26.03.2024
-      const vertCode = `
-                  // The position, colour and normal of the vertex.
-                  attribute vec4 aPosition;
-                  attribute vec4 aColor;
-                  attribute vec4 aNormal;
-                  attribute vec2 aTexCoord;
-      
-                  // The model, view, perspective and normal matrices to apply transformations.
-                  uniform mat4 uModelMatrix;
-                  uniform mat4 uViewMatrix;
-                  uniform mat4 uPerspectiveMatrix;
-                  uniform mat4 uNormalMatrix;
-      
-                  // The colour, lighting and texture coordinate of the vertex.
-                  varying vec4 vColor;
-                  varying vec3 vLighting;
-                  varying vec2 vTexCoord;
-
-                  // Vectors to pass along to the fragment shader.
-                  varying vec3 vModelPosition;
-                  varying vec3 vModelNormal;
-                  void main() {
-                     gl_Position = uPerspectiveMatrix * uViewMatrix * uModelMatrix * aPosition;
-                     
-                     highp vec3 ambientLight = vec3(0.8,0.8,0.8);
-                     highp vec3 directionalColor = vec3(1, 1, 1);
-                     highp vec3 directionalVector = normalize(vec3(0.85, 0.8, 0.75));
-                     highp vec4 transformedNormal = uNormalMatrix * aNormal;
-      
-                     highp float directional = max(dot(transformedNormal.xyz, directionalVector), 0.0);
-                     
-                     vLighting = ambientLight + (directionalColor * directional);
-                     vColor = aColor;
-                     vTexCoord = aTexCoord;
-
-                     // send the view position to the fragment shader
-                     vModelPosition = (uModelMatrix * aPosition).xyz;
-
-                     // orient the normals and pass to the fragment shader
-                     vModelNormal = mat3(uModelMatrix) * vec3(aNormal);
-                  }
-                  `;
-
-      const fragCode = `
-                  precision mediump float;
-                  varying vec4 vColor;
-                  varying vec3 vLighting;
-                  varying vec2 vTexCoord;
-
-                  // Passed in from the vertex shader.
-                  varying vec3 vModelPosition;
-                  varying vec3 vModelNormal;
-
-                  // The texture.
-                  uniform sampler2D uTexture; // Base texture.
-                  uniform samplerCube uReflectionsTexture; // Reflections texture.
-
-                  // The position of the camera.
-                  uniform vec3 uModelCameraPosition;
-                  void main() {
-                     vec3 modelNormal = normalize(vModelNormal);
-                     vec3 eyeToSurfaceDir = normalize(vModelPosition - uModelCameraPosition);
-
-                     // Calculate reflection vector
-                     vec3 reflectionDir = reflect(eyeToSurfaceDir, modelNormal);
-
-                     // Sample reflections texture
-                     lowp vec4 reflectionsColor = textureCube(uReflectionsTexture, reflectionDir);
-
-                     // Sample base texture
-                     lowp vec4 baseColor = texture2D(uTexture, vTexCoord);
-                     
-                     // Combine base color with reflections color
-                     vec4 finalColor = mix(baseColor, reflectionsColor, 0.5); // You can adjust the blend factor as needed
-
-                     // Apply lighting
-                     gl_FragColor = vec4(finalColor.rgb * vLighting, finalColor.a);
-
-                     //gl_FragColor = vec4(reflectionsColor.rgb * vLighting, 255);
-                     //gl_FragColor = vec4(baseColor.rgb * vLighting, 255);
-                  }
-                  `; 
-   </script>
+   <script src="shapes.js"></script>
+   <script src="gl-utilities.js"></script>
+   <script src="Part3/object-shader.js"></script>
+   <script src="Part3/skybox-shader.js"></script>
+   <!--Use part 2 object management as base with init-environment-map.js as extra-->
+   <script src="Part2/object-management.js"></script>
+   <script src="Part3/init-environment-map.js"></script>
 
    <script>
       // Create a canvas to paint on
@@ -516,21 +25,30 @@
       glInit();
       shaderprogram = createProgram(vertCode, fragCode);
 
+      // Create the objects to render.
+      let object1 = bench();
+      let object2 = cube();
+      let object3 = cube();
+
+      // Initialise the object's buffers and edit the model matrix of each to place them in the world.
+      let buffers1 = initObject(object1, shaderprogram);
+      let buffers2 = initObject(object2, shaderprogram);
+      mat4.fromRotationTranslationScale(buffers2.model, quat.create(), [1, 0, 0], [0.3, 0.3, 0.3]);
+      let buffers3 = initObject(object3, shaderprogram);
+      mat4.fromRotationTranslationScale(buffers3.model, quat.create(), [-1, 0, 0], [0.3, 0.3, 0.3]);
+      let buffers = [buffers1, buffers2, buffers3];
+      let directions = [[-0.005, 0.05, 0.0], [0.05, 0, 0], [0, 0.05, 0]];
+
+      // Initialite the environment map to reflect the skybox.
+      initEnvironmentMap(shaderprogram);
+
       // Create a view matrix. glMatrix helps us here with lookAt function
       let M_view = mat4.create();
-      //mat4.lookAt(M_view, [0, 0.75, 1], [0, 0, 0], [0, 1, 0]);
+      mat4.lookAt(M_view, [0, 0.5, 1.5], [0, 0, 0], [0, 1, 0]);
 
       // Create a perspective matrix. glMatrix helps us here with perspective function
       let P = mat4.create();
-      //mat4.perspective(P, Math.PI / 2, canvas.width / canvas.height, .01, 10);
-
-      // Create object one -- a scaled and translated cube
-      let object1 = bench(); //cube(); 
-      console.log(object1);
-
-      let M1_model = mat4.create();
-      mat4.fromScaling(M1_model, [1, 1, 1]);
-      //mat4.translate(M1_model, M1_model, [0.2, 0.0, .3]);
+      mat4.perspective(P, Math.PI / 2, canvas.width / canvas.height, .01, 10);
 
       // Tell WebGL to use M_view as the GLSL uniform uViewMatrix
       let ViewLoc = gl.getUniformLocation(shaderprogram, "uViewMatrix");
@@ -540,23 +58,12 @@
       let PerspLoc = gl.getUniformLocation(shaderprogram, "uPerspectiveMatrix");
       gl.uniformMatrix4fv(PerspLoc, false, new Float32Array(P));
 
-
-      // We have a matrix that represents each object's position, scale, and orientation
-      let buffers1 = initObject(object1, shaderprogram);
-      buffers1.model = M1_model;
-      //mat4.fromScaling(buffers1.model, [1, 1, 1]);
-      //mat4.rotateX(buffers1.model, buffers1.model, 2);
-
-      let objects = [buffers1];
-      // let directions = [[0.01, 0.05, 0.02]];
-      let directions = [[-0.025, 0.05, 0.0]];
-      //let directions = [[-0.05, 0.0, 0.0]];
-
+      // Initialise working matrices.
+      // This lets the objects be rotated over time with the additional directions vectors.
       let M = mat4.create();
       let R = mat4.create();
       let Norm = mat4.create();
       let MV = mat4.create();
-
 
       let then = 0;
       function render(now) {
@@ -565,18 +72,18 @@
          now /= 100;
 
          glInit();
-         for (let i = 0; i < objects.length; i++) {
+         for (let i = 0; i < buffers.length; i++) {
             // Set up the Model matrix for GLSL. We will combine rotation with positioning here
             mat4.identity(R);
             mat4.rotateX(R, R, directions[i][0] * now);
             mat4.rotateY(R, R, directions[i][1] * now);
             mat4.rotateZ(R, R, directions[i][2] * now);
-            mat4.multiply(M, objects[i].model, R);
+            mat4.multiply(M, buffers[i].model, R);
             let ModelLoc = gl.getUniformLocation(shaderprogram, "uModelMatrix");
             gl.uniformMatrix4fv(ModelLoc, false, new Float32Array(M));
 
             // calc normal matrix
-            mat4.multiply(MV, M_view, M); //, M_view);
+            mat4.multiply(MV, M_view, M);
             mat4.transpose(Norm, MV);
             mat4.invert(Norm, Norm);
             let NormLoc = gl.getUniformLocation(shaderprogram, "uNormalMatrix");
@@ -589,17 +96,12 @@
             // Transform the camera position from view space to world space
             let cameraPositionWorldSpace = vec3.create();
             vec3.transformMat4(cameraPositionWorldSpace, [0, 0, 0], M_camera);
-            //console.log("This is world space: " + cameraPositionWorldSpace);
-            //console.log("This is the camera matrix: " + M_camera);
 
             // Set the value of uModelCameraPosition uniform in the shader program
             let ModelCameraLoc = gl.getUniformLocation(shaderprogram, "uModelCameraPosition");
             gl.uniform3f(ModelCameraLoc, cameraPositionWorldSpace[0], cameraPositionWorldSpace[1], cameraPositionWorldSpace[2]);
 
-            //let ModelCameraLoc = gl.getUniformLocation(shaderprogram, "uModelCameraMatrix");
-            //gl.uniformMatrix4fv(ModelCameraLoc, false, new Float32Array(M_camera));
-
-            drawObject(objects[i], shaderprogram);
+            drawObject(buffers[i], shaderprogram);
          }
 
          // request to re-run this function next time a redraw is needed

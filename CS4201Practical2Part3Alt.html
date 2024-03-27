@@ -1,0 +1,200 @@
+<!doctype html>
+
+<html>
+
+<body>
+    <canvas width="768" height="768" id="gl-canvas">
+        Sorry; your web browser does not support HTML5’s canvas element.
+    </canvas>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gl-matrix/2.8.1/gl-matrix-min.js"
+        type="text/javascript"></script>
+    <script src="shapes.js"></script>
+    <script src="gl-utilities.js"></script>
+    <script src="Part3/object-shader.js"></script>
+    <script src="Part3/skybox-shader.js"></script>
+    <!--Use part 2 object management as base with init-environment-map.js as extra-->
+    <script src="Part2/object-management.js"></script>
+    <script src="Part3/init-environment-map.js"></script>
+
+    <script>
+        // Create a canvas to paint on
+        var canvas = document.getElementById('gl-canvas');
+        var gl = canvas.getContext('webgl');
+
+        glInit();
+        shaderprogram = createProgram(vertCode, fragCode);
+
+        // Create a view matrix. glMatrix helps us here with lookAt function
+        let M_view = mat4.create();
+        //mat4.lookAt(M_view, [0, 0.75, 1], [0, 0, 0], [0, 1, 0]);
+
+        // Create a perspective matrix. glMatrix helps us here with perspective function
+        let P = mat4.create();
+        //mat4.perspective(P, Math.PI / 2, canvas.width / canvas.height, .01, 10);
+
+        // Create object one -- a scaled and translated cube
+        let object1 = bench(); //cube(); 
+        console.log(object1);
+
+        let M1_model = mat4.create();
+        mat4.fromScaling(M1_model, [1, 1, 1]);
+        //mat4.translate(M1_model, M1_model, [0.2, 0.0, .3]);
+
+        // Tell WebGL to use M_view as the GLSL uniform uViewMatrix
+        let ViewLoc = gl.getUniformLocation(shaderprogram, "uViewMatrix");
+        gl.uniformMatrix4fv(ViewLoc, false, new Float32Array(M_view));
+
+        // Tell WebGL to use P as the GLSL uniform uPerspectiveMatrix
+        let PerspLoc = gl.getUniformLocation(shaderprogram, "uPerspectiveMatrix");
+        gl.uniformMatrix4fv(PerspLoc, false, new Float32Array(P));
+
+
+        // We have a matrix that represents each object's position, scale, and orientation
+        let buffers1 = initObject(object1, shaderprogram);
+        initEnvironmentMap(shaderprogram);
+
+        buffers1.model = M1_model;
+        //mat4.fromScaling(buffers1.model, [1, 1, 1]);
+        //mat4.rotateX(buffers1.model, buffers1.model, 2);
+
+        let objects = [buffers1];
+        // let directions = [[0.01, 0.05, 0.02]];
+        let directions = [[-0.025, 0.05, 0.0]];
+        //let directions = [[-0.05, 0.0, 0.0]];
+
+        let M = mat4.create();
+        let R = mat4.create();
+        let Norm = mat4.create();
+        let MV = mat4.create();
+
+        // We only care about direciton so remove the translation
+        let viewDirectionMatrix = mat4.create();
+        mat4.copy(viewDirectionMatrix, M_view);
+        viewDirectionMatrix[12] = 0;
+        viewDirectionMatrix[13] = 0;
+        viewDirectionMatrix[14] = 0;
+
+        let viewDirectionProjectionMatrix = mat4.create();
+        mat4.multiply(viewDirectionProjectionMatrix, P, viewDirectionMatrix);
+        let viewDirectionProjectionInverseMatrix = mat4.create();
+        mat4.invert(viewDirectionProjectionInverseMatrix, viewDirectionProjectionMatrix);
+
+        // ENVIRONMENT MAP
+        // Create and store data into environment texture buffer
+        let environmentTexture = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_CUBE_MAP, environmentTexture);
+
+        // Load each face of the cube map
+        const faces = [
+            'textures/lightcloud_rt.jpg',
+            'textures/lightcloud_lf.jpg',
+            'textures/lightcloud_up.jpg',
+            'textures/lightcloud_dn.jpg',
+            'textures/lightcloud_ft.jpg',
+            'textures/lightcloud_bk.jpg'
+        ];
+
+        faces.forEach((src, index) => {
+            const image = new Image();
+            image.addEventListener("load", function () {
+                gl.bindTexture(gl.TEXTURE_CUBE_MAP, environmentTexture);
+                gl.texImage2D(gl.TEXTURE_CUBE_MAP_POSITIVE_X + index, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+                if (index === 5) { // If it's the last face, generate mipmaps
+                    gl.generateMipmap(gl.TEXTURE_CUBE_MAP);
+                }
+            });
+            image.src = src;
+        });
+
+        // Get the uniform location for the textures
+        //const uTextureLocation = gl.getUniformLocation(shaderprogram, "uTexture");
+        //const uReflectionsTextureLocation = gl.getUniformLocation(shaderprogram, "uReflectionsTexture");
+
+        //gl.uniform1i(uTextureLocation, 0); // Assuming texture unit 0 is used for the base texture
+        //gl.uniform1i(uReflectionsTextureLocation, 1); // Assuming texture unit 1 is used for the cube map texture
+
+        let skyboxshaderprogram = createProgram(vertCodeSkybox, fragCodeSkybox);
+        let buffers2 = initObject(cube(), skyboxshaderprogram);
+        buffers2.model = mat4.create();
+
+        // Get the uniform locations for the sampler uniforms
+        const uReflectionsTextureLocation = gl.getUniformLocation(skyboxshaderprogram, "uTexture");
+
+        // Bind the cube map texture to texture unit 1
+        gl.activeTexture(gl.TEXTURE1);
+        gl.bindTexture(gl.TEXTURE_CUBE_MAP, environmentTexture); // Assume cubeMapTexture is your cube map texture
+        gl.uniform1i(uReflectionsTextureLocation, 1); // Set the texture unit for uReflectionsTexture
+
+        let then = 0;
+        function render(now) {
+            let delta = 0.001 * (now - then);
+            then = now;
+            now /= 100;
+
+            glInit();
+            gl.useProgram(shaderprogram);
+            for (let i = 0; i < objects.length; i++) {
+                // Set up the Model matrix for GLSL. We will combine rotation with positioning here
+                mat4.identity(R);
+                mat4.rotateX(R, R, directions[i][0] * now);
+                mat4.rotateY(R, R, directions[i][1] * now);
+                mat4.rotateZ(R, R, directions[i][2] * now);
+                mat4.multiply(M, objects[i].model, R);
+                let ModelLoc = gl.getUniformLocation(shaderprogram, "uModelMatrix");
+                gl.uniformMatrix4fv(ModelLoc, false, new Float32Array(M));
+
+                // calc normal matrix
+                mat4.multiply(MV, M_view, M); //, M_view);
+                mat4.transpose(Norm, MV);
+                mat4.invert(Norm, Norm);
+                let NormLoc = gl.getUniformLocation(shaderprogram, "uNormalMatrix");
+                gl.uniformMatrix4fv(NormLoc, false, new Float32Array(Norm));
+
+                // Invert the view matrix to get the transformation from view space to world space
+                let M_camera = mat4.create();
+                mat4.invert(M_camera, M_view);
+
+                // Transform the camera position from view space to world space
+                let cameraPositionWorldSpace = vec3.create();
+                vec3.transformMat4(cameraPositionWorldSpace, [0, 0, 0], M_camera);
+                //console.log("This is world space: " + cameraPositionWorldSpace);
+                //console.log("This is the camera matrix: " + M_camera);
+
+                // Set the value of uModelCameraPosition uniform in the shader program
+                let ModelCameraLoc = gl.getUniformLocation(shaderprogram, "uModelCameraPosition");
+                gl.uniform3f(ModelCameraLoc, cameraPositionWorldSpace[0], cameraPositionWorldSpace[1], cameraPositionWorldSpace[2]);
+
+                //let ModelCameraLoc = gl.getUniformLocation(shaderprogram, "uModelCameraMatrix");
+                //gl.uniformMatrix4fv(ModelCameraLoc, false, new Float32Array(M_camera));
+
+                drawObject(objects[i], shaderprogram);
+            }
+
+            // draw the skybox
+            // let our quad pass the depth test at 1.0
+            gl.depthFunc(gl.LEQUAL);
+
+            gl.useProgram(skyboxshaderprogram);
+            let ViewDirectionProjectionInverseMatrixLoc = gl.getUniformLocation(skyboxshaderprogram, "uViewDirectionProjectionInverse");
+            gl.uniformMatrix4fv(ViewDirectionProjectionInverseMatrixLoc, false, new Float32Array(viewDirectionProjectionInverseMatrix));
+
+            drawObject(buffers2, skyboxshaderprogram);
+
+            //gl.useProgram(skyboxProgramInfo.program);
+            // webglUtils.setBuffersAndAttributes(gl, skyboxProgramInfo, quadBufferInfo);
+            // webglUtils.setUniforms(skyboxProgramInfo, {
+            //    uViewDirectionProjectionInverse: viewDirectionProjectionInverseMatrix,
+            //    uSkybox: environmentTexture,
+            // });
+            // webglUtils.drawBufferInfo(gl, quadBufferInfo);
+
+            // request to re-run this function next time a redraw is needed
+            requestAnimationFrame(render);
+        }
+        requestAnimationFrame(render);
+
+    </script>
+</body>
+
+</html>
