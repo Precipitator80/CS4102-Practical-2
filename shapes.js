@@ -184,27 +184,70 @@ function cuboid(left, right, bottom, top, back, front) {
     };
 }
 
+function combineShapes(shapes) {
+    let combinedVertices = [];
+    let combinedColors = [];
+    let combinedIndices = [];
+    let combinedNormals = [];
+    let combinedTexcoords = [];
+
+    let offset = 0;
+
+    for (let shape of shapes) {
+        combinedVertices.push(...shape.vertices);
+        combinedColors.push(...shape.colors);
+        combinedNormals.push(...shape.normals);
+        combinedTexcoords.push(...shape.texcoords);
+
+        // Update indices with the current offset
+        let shapeIndices = shape.indices.map(index => index.map(idx => idx + offset));
+        combinedIndices.push(...shapeIndices);
+
+        // Increment the offset
+        offset += shape.vertices.length;
+    }
+
+    return {
+        vertices: combinedVertices,
+        colors: combinedColors,
+        indices: combinedIndices,
+        normals: combinedNormals,
+        texcoords: combinedTexcoords
+    };
+}
+
 function bench() {
-    let [xExtent, yExtent, zExtent] = [0.5, 0.125, 0.25]
+    let [xExtent, yExtent, zExtent] = [0.5, 0.125, 0.25];
     let top = cuboid(-xExtent, xExtent, -yExtent, yExtent, -zExtent, zExtent);
     let leftLeg = cuboid(-xExtent + xExtent / 6, -xExtent + xExtent / 2, -3 * yExtent, -yExtent, -0.8 * zExtent, 0.8 * zExtent);
     let rightLeg = cuboid(xExtent - xExtent / 2, xExtent - xExtent / 6, -3 * yExtent, -yExtent, -0.8 * zExtent, 0.8 * zExtent);
 
-    // Increment indices in leftLeg using the top vertices as an offset.
-    const leftLegOffset = top.vertices.length;
-    leftLeg.indices = leftLeg.indices.map(index =>
-        [index[0] + leftLegOffset, index[1] + leftLegOffset, index[2] + leftLegOffset]);
+    return combineShapes([top, leftLeg, rightLeg]);
 
-    // Increment indices in rightLeg using the other two sets of vertices as an offset.
-    const rightLegOffset = top.vertices.length + leftLeg.vertices.length;
-    rightLeg.indices = rightLeg.indices.map(index =>
-        [index[0] + rightLegOffset, index[1] + rightLegOffset, index[2] + rightLegOffset]);
+    // // Increment indices in leftLeg using the top vertices as an offset.
+    // const leftLegOffset = top.vertices.length;
+    // leftLeg.indices = leftLeg.indices.map(index =>
+    //     [index[0] + leftLegOffset, index[1] + leftLegOffset, index[2] + leftLegOffset]);
 
-    return {
-        vertices: [...top.vertices, ...leftLeg.vertices, ...rightLeg.vertices],
-        colors: [...top.colors, ...leftLeg.colors, ...rightLeg.colors],
-        indices: [...top.indices, ...leftLeg.indices, ...rightLeg.indices],
-        normals: [...top.normals, ...leftLeg.normals, ...rightLeg.normals],
-        texcoords: [...top.texcoords, ...leftLeg.texcoords, ...rightLeg.texcoords]
-    };
+    // // Increment indices in rightLeg using the other two sets of vertices as an offset.
+    // const rightLegOffset = top.vertices.length + leftLeg.vertices.length;
+    // rightLeg.indices = rightLeg.indices.map(index =>
+    //     [index[0] + rightLegOffset, index[1] + rightLegOffset, index[2] + rightLegOffset]);
+
+    // return {
+    //     vertices: [...top.vertices, ...leftLeg.vertices, ...rightLeg.vertices],
+    //     colors: [...top.colors, ...leftLeg.colors, ...rightLeg.colors],
+    //     indices: [...top.indices, ...leftLeg.indices, ...rightLeg.indices],
+    //     normals: [...top.normals, ...leftLeg.normals, ...rightLeg.normals],
+    //     texcoords: [...top.texcoords, ...leftLeg.texcoords, ...rightLeg.texcoords]
+    // };
+}
+
+function flower() {
+    let [xExtent, yExtent, zExtent] = [0.5, 0.5, 0.25];
+    let stem = cuboid(-xExtent / 2, xExtent / 2, -yExtent, yExtent, -zExtent, zExtent);
+    let leftPetal = cuboid(-xExtent, -xExtent / 2, -yExtent / 2, yExtent / 2, -zExtent, zExtent);
+    let rightPetal = cuboid(xExtent / 2, xExtent, -yExtent / 2, yExtent / 2, -zExtent, zExtent);
+
+    return combineShapes([stem, leftPetal, rightPetal]);
 }
