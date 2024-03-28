@@ -13,9 +13,9 @@
    <script src="gl-utilities.js"></script>
    <script src="Part3/object-shader.js"></script>
    <script src="Part3/skybox-shader.js"></script>
-   <!--Use part 2 object management as base with init-environment-map.js as extra-->
+   <!--Use part 2 object management as base with skybox-management.js as extra-->
    <script src="Part2/object-management.js"></script>
-   <script src="Part3/init-environment-map.js"></script>
+   <script src="Part3/skybox-management.js"></script>
 
    <script>
       // Create a canvas to paint on
@@ -39,8 +39,8 @@
       let buffers = [buffers1, buffers2, buffers3];
       let directions = [[-0.005, 0.05, 0.0], [0.05, 0, 0], [0, 0.05, 0]];
 
-      // Initialite the environment map to reflect the skybox.
-      initEnvironmentMap(shaderprogram);
+      // Load the skybox texture into the object shader program to let them reflect it using environment mapping.
+      loadSkyboxTexture(shaderprogram);
 
       // Create a view matrix. glMatrix helps us here with lookAt function
       let M_view = mat4.create();
@@ -58,6 +58,23 @@
       let PerspLoc = gl.getUniformLocation(shaderprogram, "uPerspectiveMatrix");
       gl.uniformMatrix4fv(PerspLoc, false, new Float32Array(P));
 
+      // Initialise the skybox.
+      skyboxshaderprogram = createProgram(vertCodeSkybox, fragCodeSkybox);
+      let skyboxObject = cuboid(-1, 1, -1, 1, -1, 1);
+      let skyboxBuffers = initSkybox(skyboxObject, skyboxshaderprogram);
+
+      let viewDirectionMatrix = mat4.create();
+      mat4.copy(viewDirectionMatrix, M_view);
+      viewDirectionMatrix[12] = 0;
+      viewDirectionMatrix[13] = 0;
+      viewDirectionMatrix[14] = 0;
+
+      let viewDirectionProjectionMatrix = mat4.create();
+      mat4.multiply(viewDirectionProjectionMatrix, P, viewDirectionMatrix);
+      let viewDirectionProjectionInverseMatrix = mat4.create();
+      mat4.invert(viewDirectionProjectionInverseMatrix, viewDirectionProjectionMatrix);
+
+
       // Initialise working matrices.
       // This lets the objects be rotated over time with the additional directions vectors.
       let M = mat4.create();
@@ -72,6 +89,7 @@
          now /= 100;
 
          glInit();
+         gl.useProgram(shaderprogram);
          for (let i = 0; i < buffers.length; i++) {
             // Set up the Model matrix for GLSL. We will combine rotation with positioning here
             mat4.identity(R);
@@ -103,6 +121,13 @@
 
             drawObject(buffers[i], shaderprogram);
          }
+
+         // draw the skybox
+         gl.depthFunc(gl.LEQUAL); // let our quad pass the depth test at 1.0
+         gl.useProgram(skyboxshaderprogram);
+         let ViewDirectionProjectionInverseMatrixLoc = gl.getUniformLocation(skyboxshaderprogram, "uViewDirectionProjectionInverse");
+         gl.uniformMatrix4fv(ViewDirectionProjectionInverseMatrixLoc, false, new Float32Array(viewDirectionProjectionInverseMatrix));
+         drawSkybox(skyboxBuffers, skyboxshaderprogram);
 
          // request to re-run this function next time a redraw is needed
          requestAnimationFrame(render);

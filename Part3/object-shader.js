@@ -54,7 +54,7 @@ varying vec3 vModelPosition;
 varying vec3 vModelNormal;
 // The texture.
 uniform sampler2D uTexture; // Base texture.
-uniform samplerCube uReflectionsTexture; // Reflections texture.
+uniform samplerCube uSkyboxTexture; // Reflections texture.
 // The position of the camera.
 uniform vec3 uModelCameraPosition;
 void main() {
@@ -63,7 +63,7 @@ void main() {
    // Calculate reflection vector
    vec3 reflectionDir = reflect(eyeToSurfaceDir, modelNormal);
    // Sample reflections texture
-   lowp vec4 reflectionsColor = textureCube(uReflectionsTexture, reflectionDir);
+   lowp vec4 reflectionsColor = textureCube(uSkyboxTexture, reflectionDir);
    // Sample base texture
    lowp vec4 baseColor = texture2D(uTexture, vTexCoord);
    

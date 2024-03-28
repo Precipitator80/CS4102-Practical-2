@@ -10,11 +10,11 @@ void main() {
 
 const fragCodeSkybox = `
 precision mediump float;
-uniform samplerCube uSkybox;
+uniform samplerCube uSkyboxTexture;
 uniform mat4 uViewDirectionProjectionInverse;
 varying vec4 vPosition;
 void main() {
    vec4 t = uViewDirectionProjectionInverse * vPosition;
-   gl_FragColor = textureCube(uSkybox, normalize(t.xyz / t.w));
+   gl_FragColor = textureCube(uSkyboxTexture, normalize(t.xyz / t.w));
 }
 `; 
