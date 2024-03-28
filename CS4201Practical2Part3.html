@@ -37,7 +37,6 @@
       let buffers3 = initObject(object3, shaderprogram);
       mat4.fromRotationTranslationScale(buffers3.model, quat.create(), [-1, 0, 0], [0.3, 0.3, 0.3]);
       let buffers = [buffersBench, buffers2, buffers3];
-      let directions = [[-0.005, 0.05, 0.0], [0.05, 0, 0], [0, 0.05, 0]];
 
       // Load the skybox texture into the object shader program to let them reflect it using environment mapping.
       loadSkyboxTexture(shaderprogram);
@@ -116,9 +115,8 @@
 
 
       // Initialise working matrices.
-      // This lets the objects be rotated over time with the additional directions vectors.
+      // This lets the objects be changed over time using additional vectors.
       let M = mat4.create();
-      let R = mat4.create();
       let Norm = mat4.create();
       let MV = mat4.create();
 
