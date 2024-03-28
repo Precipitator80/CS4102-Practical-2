@@ -26,21 +26,61 @@
       shaderprogram = createProgram(vertCode, fragCode);
 
       // Create the objects to render.
-      let object1 = bench();
+      let benchObject = bench();
       let object2 = cube();
       let object3 = cube();
 
       // Initialise the object's buffers and edit the model matrix of each to place them in the world.
-      let buffers1 = initObject(object1, shaderprogram);
+      let buffersBench = initObject(benchObject, shaderprogram);
       let buffers2 = initObject(object2, shaderprogram);
       mat4.fromRotationTranslationScale(buffers2.model, quat.create(), [1, 0, 0], [0.3, 0.3, 0.3]);
       let buffers3 = initObject(object3, shaderprogram);
       mat4.fromRotationTranslationScale(buffers3.model, quat.create(), [-1, 0, 0], [0.3, 0.3, 0.3]);
-      let buffers = [buffers1, buffers2, buffers3];
+      let buffers = [buffersBench, buffers2, buffers3];
       let directions = [[-0.005, 0.05, 0.0], [0.05, 0, 0], [0, 0.05, 0]];
 
       // Load the skybox texture into the object shader program to let them reflect it using environment mapping.
       loadSkyboxTexture(shaderprogram);
+
+      // This function will allow recursion by combining object's model with parent's
+      returnM = function (object, time) {
+         if (object.parent == null)
+            return object.createM(time);
+         else
+            return mat4.multiply(object.M_combined, returnM(object.parent, time), object.createM(time));
+      }
+
+      buffersBench.M_combined = mat4.create();
+      buffersBench.createM = function (time) {
+         let model = buffersBench.model;
+         mat4.fromScaling(model, [1, 1, 1]);
+         mat4.rotateY(model, model, 0.03 * time);
+         mat4.translate(model, model, [0.25, -0.5, -0.5]);
+         return model;
+      }
+      buffersBench.parent = null;
+
+      buffers2.M_combined = mat4.create();
+      buffers2.createM = function (time) {
+         let model = buffers2.model;
+         mat4.fromScaling(model, [0.25, 0.25, 0.25]);
+         mat4.rotateY(model, model, 0.03 * time);
+         //mat4.rotateX(model, model, 0.03 * time);
+         mat4.translate(model, model, [4, 0, 0]);
+         return model;
+      }
+      buffers2.parent = buffersBench;
+
+      buffers3.M_combined = mat4.create();
+      buffers3.createM = function (time) {
+         let model = buffers3.model;
+         mat4.fromScaling(model, [0.25, 0.25, 0.25]);
+         mat4.rotateY(model, model, 0.03 * time);
+         //mat4.rotateZ(model, model, 0.03 * time);
+         mat4.translate(model, model, [-4, 0, 0]);
+         return model;
+      }
+      buffers3.parent = buffersBench;
 
       // Create a view matrix. glMatrix helps us here with lookAt function
       let M_view = mat4.create();
@@ -91,12 +131,9 @@
          glInit();
          gl.useProgram(shaderprogram);
          for (let i = 0; i < buffers.length; i++) {
-            // Set up the Model matrix for GLSL. We will combine rotation with positioning here
-            mat4.identity(R);
-            mat4.rotateX(R, R, directions[i][0] * now);
-            mat4.rotateY(R, R, directions[i][1] * now);
-            mat4.rotateZ(R, R, directions[i][2] * now);
-            mat4.multiply(M, buffers[i].model, R);
+            // Set up the Model matrix for GLSL.
+            M = returnM(buffers[i], now);
+
             let ModelLoc = gl.getUniformLocation(shaderprogram, "uModelMatrix");
             gl.uniformMatrix4fv(ModelLoc, false, new Float32Array(M));
 
