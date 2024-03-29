@@ -6,7 +6,7 @@
  * @param   object         An object containing arrays for vertices, colors, normals, and indices
  * @param   shaderprogram  a shader program returned by createProgram
  */
-function initObject(object, shaderprogram) {
+function initObject(object, shaderprogram, textureFilePath) {
     gl.useProgram(shaderprogram);
 
     // Vertices, colors and indices arrive in the form of 2D matrix objects for ease of manipulation
@@ -55,7 +55,7 @@ function initObject(object, shaderprogram) {
         gl.generateMipmap(gl.TEXTURE_2D);
     });
 
-    image.src = "textures/marble10 diffuse 1k.jpg";
+    image.src = textureFilePath;
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
 
     let tex_buffer = gl.createBuffer();
@@ -69,7 +69,8 @@ function initObject(object, shaderprogram) {
         index_buffer: index_buffer,
         tex_buffer: tex_buffer,
         numVertices: indices.length,
-        model: mat4.create()
+        model: mat4.create(),
+        texture: texture
     };
 }
 
@@ -111,6 +112,10 @@ function drawObject(bufferObject, shaderprogram) {
     gl.bindBuffer(gl.ARRAY_BUFFER, tex_buffer);
     gl.vertexAttribPointer(aTexCoord, 2, gl.FLOAT, false, 0, 0);
     gl.enableVertexAttribArray(aTexCoord);
+
+    // Set the correct texture.
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, bufferObject.texture);
 
     // Draw elements as triangles
     gl.drawElements(gl.TRIANGLES, number, gl.UNSIGNED_SHORT, 0);
