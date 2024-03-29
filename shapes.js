@@ -527,6 +527,6 @@ function lamppost() {
     let [xExtent, yExtent, zExtent] = [0.25, 2, 0.25];
     let base = cuboid(-3 * xExtent, 3 * xExtent, -1.01 * yExtent, -0.75 * yExtent, -3 * zExtent, 3 * zExtent);
     let post = cuboid(-xExtent, xExtent, -yExtent, 2.5 * yExtent, -zExtent, zExtent);
-    let lamp = cuboid(-0.99 * xExtent, 6 * xExtent, 2.25 * yExtent, 2.5 * yExtent, -0.99 * zExtent, 0.99 * zExtent);
+    let lamp = cuboid(-0.999 * xExtent, 6 * xExtent, 2.25 * yExtent, 2.499 * yExtent, -0.999 * zExtent, 0.999 * zExtent);
     return combineShapes([base, post, lamp]);
 }
