@@ -515,8 +515,18 @@ function bench() {
 function flower() {
     let [xExtent, yExtent, zExtent] = [0.25, 0.5, 0.25];
     let stem = cuboid(-xExtent / 2, xExtent / 2, -yExtent, 3 * yExtent, -zExtent, zExtent);
-    let leftLeaf = line(vec3.fromValues(0, -0.5, 0), vec3.fromValues(xExtent * 4, 1, 0), xExtent / 2, 0.9 * zExtent);
-    let rightLeaf = line(vec3.fromValues(0, -0.5, 0), vec3.fromValues(-xExtent * 4, 1, 0), xExtent / 2, 0.9 * zExtent);
+    let leftLeaf = line(vec3.fromValues(0, -0.5, 0), vec3.fromValues(xExtent * 4, 1, 0), xExtent / 2, 0.99 * zExtent);
+    let rightLeaf = line(vec3.fromValues(0, -0.5, 0), vec3.fromValues(-xExtent * 4, 1, 0), xExtent / 2, 0.99 * zExtent);
+    let petalBase = cuboid(-2 * xExtent, 2 * xExtent, 2 * yExtent, 4 * yExtent, -1.01 * zExtent, 1.01 * zExtent);
+    let petalExtra = line(vec3.fromValues(-1.7 * xExtent, 2.3 * yExtent, 0), vec3.fromValues(1.7 * xExtent, 3.7 * yExtent, 0), 2 * xExtent, 0.99 * zExtent);
 
-    return combineShapes([stem, leftLeaf, rightLeaf]);
+    return combineShapes([stem, leftLeaf, rightLeaf, petalBase, petalExtra]);
+}
+
+function lamppost() {
+    let [xExtent, yExtent, zExtent] = [0.25, 2, 0.25];
+    let base = cuboid(-3 * xExtent, 3 * xExtent, -1.01 * yExtent, -0.75 * yExtent, -3 * zExtent, 3 * zExtent);
+    let post = cuboid(-xExtent, xExtent, -yExtent, 2.5 * yExtent, -zExtent, zExtent);
+    let lamp = cuboid(-0.99 * xExtent, 6 * xExtent, 2.25 * yExtent, 2.5 * yExtent, -0.99 * zExtent, 0.99 * zExtent);
+    return combineShapes([base, post, lamp]);
 }
