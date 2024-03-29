@@ -38,7 +38,7 @@
          -1 / Math.tan(theta), -1 / Math.tan(phi), 1, 0,
          0, 0, 0, 1);
 
-      // Also tried this, but it didn't work:
+      // Theory can be cited from this, but the transpose must be used since WebGL uses column-major matrix order.
       // Oblique Projections - Edward Angel - https://www.cs.unm.edu/~angel/AW/chap05d.pdf - Accessed 26.03.2024
 
       // Tell WebGL to use P as the GLSL uniform uPerspectiveMatrix.
