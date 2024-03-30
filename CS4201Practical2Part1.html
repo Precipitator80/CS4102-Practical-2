@@ -29,10 +29,9 @@
 
       // Set the projection to be oblique.
       // WebGl - Oblique projection - LJ - https://stackoverflow.com/questions/29131729/webgl-oblique-projection - Accessed 26.03.2024
-      let P = mat4.create();
       let theta = 2;
       let phi = -Math.PI / 2.5;
-      mat4.set(P,
+      let P = mat4.fromValues(
          1, 0, 0, 0,
          0, 1, 0, 0,
          -1 / Math.tan(theta), -1 / Math.tan(phi), 1, 0,

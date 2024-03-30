@@ -21,6 +21,7 @@ uniform mat4 uNormalMatrix;
 varying vec4 vColor;
 varying vec3 vLighting;
 varying vec2 vTexCoord;
+
 // Vectors to pass along to the fragment shader.
 varying vec3 vModelPosition;
 varying vec3 vModelNormal;
@@ -37,9 +38,11 @@ void main() {
    vLighting = ambientLight + (directionalColor * directional);
    vColor = aColor;
    vTexCoord = aTexCoord;
-   // send the view position to the fragment shader
+
+   // Send the view position to the fragment shader.
    vModelPosition = (uModelMatrix * aPosition).xyz;
-   // orient the normals and pass to the fragment shader
+
+   // Orient the normals and pass them to the fragment shader.
    vModelNormal = mat3(uModelMatrix) * vec3(aNormal);
 }
 `;
@@ -49,29 +52,32 @@ precision mediump float;
 varying vec4 vColor;
 varying vec3 vLighting;
 varying vec2 vTexCoord;
+
 // Passed in from the vertex shader.
 varying vec3 vModelPosition;
 varying vec3 vModelNormal;
-// The texture.
+
+// The textures.
 uniform sampler2D uTexture; // Base texture.
 uniform samplerCube uSkyboxTexture; // Reflections texture.
+
 // The position of the camera.
 uniform vec3 uModelCameraPosition;
+
 void main() {
-   vec3 modelNormal = normalize(vModelNormal);
+   // Calculate the direction to the surface from the camera (eye).
    vec3 eyeToSurfaceDir = normalize(vModelPosition - uModelCameraPosition);
-   // Calculate reflection vector
+
+   // Calculate the reflection vector using the model normal.
+   vec3 modelNormal = normalize(vModelNormal);
    vec3 reflectionDir = reflect(eyeToSurfaceDir, modelNormal);
-   // Sample reflections texture
-   lowp vec4 reflectionsColor = textureCube(uSkyboxTexture, reflectionDir);
-   // Sample base texture
-   lowp vec4 baseColor = texture2D(uTexture, vTexCoord);
    
-   // Combine base color with reflections color
+   // Sample and combine the base texture with the reflections texture.
+   lowp vec4 reflectionsColor = textureCube(uSkyboxTexture, reflectionDir);
+   lowp vec4 baseColor = texture2D(uTexture, vTexCoord);
    vec4 finalColor = mix(baseColor, reflectionsColor, 0.5); // Last argument is the blend factor.
-   // Apply lighting
+
+   // Use the blended colour value to set the fragment colour.
    gl_FragColor = vec4(finalColor.rgb * vLighting, finalColor.a);
-   //gl_FragColor = vec4(reflectionsColor.rgb * vLighting, 255);
-   //gl_FragColor = vec4(baseColor.rgb * vLighting, 255);
 }
 `;

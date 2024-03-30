@@ -3,6 +3,7 @@ const vertCodeSkybox = `
 attribute vec4 aPosition;
 varying vec4 vPosition;
 void main() {
+   // Set the gl position as 1 in the z axis to place the skybox behind all objects.
    vPosition = aPosition;
    gl_Position = vec4(aPosition.xy, 1, 1);
 }

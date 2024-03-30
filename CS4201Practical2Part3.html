@@ -128,6 +128,7 @@
 
          glInit();
          gl.useProgram(shaderprogram);
+         gl.depthFunc(gl.LESS); // Use the default depth test for objects.
          for (let i = 0; i < buffers.length; i++) {
             // Set up the Model matrix for GLSL.
             M = returnM(buffers[i], now);
