@@ -18,7 +18,7 @@ const vertCode = `
                      gl_Position = uPerspectiveMatrix * uViewMatrix * uModelMatrix * aPosition;
 
                      highp vec3 ambientLight = vec3(0.3,0.3,0.3);
-                     highp vec3 directionalColor = vec3(1,1,1);
+                     highp vec3 directionalColor = vec3(0.275,0.420,0.471);
                      highp vec3 directionalVector = normalize(vec3(0.85, 0.8, 0.75));
                      highp vec4 transformedNormal = normalize(uNormalMatrix * aNormal);
       
