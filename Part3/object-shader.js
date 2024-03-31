@@ -28,7 +28,7 @@ varying vec3 vModelNormal;
 void main() {
    gl_Position = uPerspectiveMatrix * uViewMatrix * uModelMatrix * aPosition;
 
-   highp vec3 ambientLight = vec3(0.7,0.7,0.7);
+   highp vec3 ambientLight = vec3(0.9,0.9,0.9);
    highp vec3 directionalColor = vec3(0.655,0.745,0.910);
    highp vec3 directionalVector = normalize(vec3(0.85, 0.8, 0.75));
    highp vec4 transformedNormal = normalize(uNormalMatrix * aNormal);
