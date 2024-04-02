@@ -102,17 +102,20 @@
       let skyboxObject = cuboid(-1, 1, -1, 1, -1, 1);
       let skyboxBuffers = initSkybox(skyboxObject, skyboxshaderprogram);
 
+      // Set the translation component to 0 as only the view direction matters for the skybox.
       let viewDirectionMatrix = mat4.create();
       mat4.copy(viewDirectionMatrix, M_view);
       viewDirectionMatrix[12] = 0;
       viewDirectionMatrix[13] = 0;
       viewDirectionMatrix[14] = 0;
 
+      // Take the projection into account when rendering the skybox.
       let viewDirectionProjectionMatrix = mat4.create();
       mat4.multiply(viewDirectionProjectionMatrix, P, viewDirectionMatrix);
+
+      // Use the inverse of the view direction projection matrix to get the direction of the camera to the skybox.
       let viewDirectionProjectionInverseMatrix = mat4.create();
       mat4.invert(viewDirectionProjectionInverseMatrix, viewDirectionProjectionMatrix);
-
 
       // Initialise working matrices.
       // This lets the objects be changed over time using additional vectors.
@@ -136,7 +139,7 @@
             let ModelLoc = gl.getUniformLocation(shaderprogram, "uModelMatrix");
             gl.uniformMatrix4fv(ModelLoc, false, new Float32Array(M));
 
-            // calc normal matrix
+            // Calculate the normal matrix.
             mat4.multiply(MV, M_view, M);
             mat4.transpose(Norm, MV);
             mat4.invert(Norm, Norm);
@@ -158,14 +161,14 @@
             drawObject(buffers[i], shaderprogram);
          }
 
-         // draw the skybox
-         gl.depthFunc(gl.LEQUAL); // let our quad pass the depth test at 1.0
+         // Draw the skybox.
+         gl.depthFunc(gl.LEQUAL); // Let the skybox pass the depth test at 1.0 (edge of clip space).
          gl.useProgram(skyboxshaderprogram);
          let ViewDirectionProjectionInverseMatrixLoc = gl.getUniformLocation(skyboxshaderprogram, "uViewDirectionProjectionInverse");
          gl.uniformMatrix4fv(ViewDirectionProjectionInverseMatrixLoc, false, new Float32Array(viewDirectionProjectionInverseMatrix));
          drawSkybox(skyboxBuffers, skyboxshaderprogram);
 
-         // request to re-run this function next time a redraw is needed
+         // Request to re-run this function next time a redraw is needed.
          requestAnimationFrame(render);
       }
       requestAnimationFrame(render);
