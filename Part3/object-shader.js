@@ -7,7 +7,6 @@
 const vertCode = `
 // The position, colour and normal of the vertex.
 attribute vec4 aPosition;
-attribute vec4 aColor;
 attribute vec4 aNormal;
 attribute vec2 aTexCoord;
 
@@ -17,8 +16,7 @@ uniform mat4 uViewMatrix;
 uniform mat4 uPerspectiveMatrix;
 uniform mat4 uNormalMatrix;
 
-// The colour, lighting and texture coordinate of the vertex.
-varying vec4 vColor;
+// The lighting and texture coordinate of the vertex.
 varying vec3 vLighting;
 varying vec2 vTexCoord;
 
@@ -36,7 +34,6 @@ void main() {
    highp float directional = max(dot(transformedNormal.xyz, directionalVector), 0.0);
    
    vLighting = ambientLight + (directionalColor * directional);
-   vColor = aColor;
    vTexCoord = aTexCoord;
 
    // Send the view position to the fragment shader.
@@ -49,7 +46,6 @@ void main() {
 
 const fragCode = `
 precision mediump float;
-varying vec4 vColor;
 varying vec3 vLighting;
 varying vec2 vTexCoord;
 

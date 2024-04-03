@@ -3,16 +3,15 @@
  * and records the references to each. We can then pass this object to drawObject
  * which will bind the arrays appropriately
  * 
- * @param   object         An object containing arrays for vertices, colors, normals, and indices
+ * @param   object         An object containing arrays for vertices, normals, and indices
  * @param   shaderprogram  a shader program returned by createProgram
  */
 function initObject(object, shaderprogram, textureFilePath) {
     gl.useProgram(shaderprogram);
 
-    // Vertices, colors and indices arrive in the form of 2D matrix objects for ease of manipulation
+    // Vertices and indices arrive in the form of 2D matrix objects for ease of manipulation
     // We need to flatten them and convert them to JS arrays before passing them to WebGL
     let vertices = object.vertices.flat();
-    let colors = object.colors.flat();
     let indices = object.indices.flat();
     let normals = object.normals.flat();
     let texcoords = object.texcoords.flat();
@@ -22,17 +21,12 @@ function initObject(object, shaderprogram, textureFilePath) {
     gl.bindBuffer(gl.ARRAY_BUFFER, vertex_buffer);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
 
-    // Create and store data into color buffer
-    let color_buffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, color_buffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
-
     // Create and store data into index buffer
     let index_buffer = gl.createBuffer();
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, index_buffer);
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
 
-    // Create and store data into color buffer
+    // Create and store data into normal buffer
     let normal_buffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, normal_buffer);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(normals), gl.STATIC_DRAW);
@@ -64,7 +58,6 @@ function initObject(object, shaderprogram, textureFilePath) {
 
     return {
         vertex_buffer: vertex_buffer,
-        color_buffer: color_buffer,
         normal_buffer: normal_buffer,
         index_buffer: index_buffer,
         tex_buffer: tex_buffer,
@@ -84,7 +77,6 @@ function drawObject(bufferObject, shaderprogram) {
     gl.useProgram(shaderprogram);
 
     let vertex_buffer = bufferObject.vertex_buffer;
-    let color_buffer = bufferObject.color_buffer;
     let normal_buffer = bufferObject.normal_buffer;
     let index_buffer = bufferObject.index_buffer;
     let tex_buffer = bufferObject.tex_buffer;
@@ -95,11 +87,6 @@ function drawObject(bufferObject, shaderprogram) {
     let aPosition = gl.getAttribLocation(shaderprogram, "aPosition");
     gl.vertexAttribPointer(aPosition, 4, gl.FLOAT, false, 0, 0);
     gl.enableVertexAttribArray(aPosition);
-
-    gl.bindBuffer(gl.ARRAY_BUFFER, color_buffer);
-    let aColor = gl.getAttribLocation(shaderprogram, "aColor");
-    gl.vertexAttribPointer(aColor, 4, gl.FLOAT, false, 0, 0);
-    gl.enableVertexAttribArray(aColor);
 
     gl.bindBuffer(gl.ARRAY_BUFFER, normal_buffer);
     let aNormal = gl.getAttribLocation(shaderprogram, "aNormal");

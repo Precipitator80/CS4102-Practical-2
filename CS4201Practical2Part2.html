@@ -27,12 +27,10 @@
       let object2 = flower();
       let object3 = lamppost();
 
-      // Initialise the object's buffers and edit the model matrix of each to place them in the world.
+      // Initialise the object's buffers.
       let buffersBench = initObject(benchObject, shaderprogram, "textures/marble10 diffuse 1k.jpg");
       let buffers2 = initObject(object2, shaderprogram, "textures/wood 01 Diffuse.jpg");
-      mat4.fromRotationTranslationScale(buffers2.model, quat.create(), [1, 0, 0], [0.3, 0.3, 0.3]);
       let buffers3 = initObject(object3, shaderprogram, "textures/bricks.png");
-      mat4.fromRotationTranslationScale(buffers3.model, quat.create(), [-1, 0, 0], [0.3, 0.3, 0.3]);
       let buffers = [buffersBench, buffers2, buffers3];
 
       // This function will allow recursion by combining object's model with parent's

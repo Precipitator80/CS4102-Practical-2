@@ -1,0 +1,288 @@
+<!doctype html>
+
+<html>
+
+<body>
+   <canvas width="768" height="768" id="gl-canvas">
+      Sorry; your web browser does not support HTML5’s canvas element.
+   </canvas>
+
+   <script src="https://cdnjs.cloudflare.com/ajax/libs/gl-matrix/2.8.1/gl-matrix-min.js"
+      type="text/javascript"></script>
+   <script src="shapes.js"></script>
+   <script src="gl-utilities.js"></script>
+   <script src="Part3/object-shader.js"></script>
+   <script src="Part3/skybox-shader.js"></script>
+   <!--Use part 2 object management as base with skybox-management.js as extra-->
+   <script src="Part2/object-management.js"></script>
+   <script src="Part3/skybox-management.js"></script>
+   <!--Additional scripts for part 4-->
+   <script src="Part4/mirror-shader.js"></script>
+   <script src="Part4/mirror-management.js"></script>
+
+   <script>
+      // Create a canvas to paint on
+      var canvas = document.getElementById('gl-canvas');
+      var gl = canvas.getContext('webgl');
+
+      glInit();
+      shaderprogram = createProgram(vertCode, fragCode);
+
+      // Create the objects to render.
+      let benchObject = bench();
+      let object2 = flower();
+      let object3 = lamppost();
+
+      // Initialise the object's buffers.
+      let buffersBench = initObject(benchObject, shaderprogram, "textures/CubeFaces.png");
+      let buffers2 = initObject(object2, shaderprogram, "textures/CubeFaces.png");
+      let buffers3 = initObject(object3, shaderprogram, "textures/CubeFaces.png");
+      let buffers = [buffersBench, buffers2, buffers3];
+
+      // Load the skybox texture into the object shader program to let them reflect it using environment mapping.
+      gl.useProgram(shaderprogram);
+      loadSkyboxTexture(shaderprogram);
+
+      // This function will allow recursion by combining object's model with parent's
+      returnM = function (object, time) {
+         if (object.parent == null)
+            return object.createM(time);
+         else
+            return mat4.multiply(object.M_combined, returnM(object.parent, time), object.createM(time));
+      }
+
+      buffersBench.M_combined = mat4.create();
+      buffersBench.createM = function (time) {
+         let model = buffersBench.model;
+         mat4.fromScaling(model, [1, 1, 1]);
+         mat4.rotateY(model, model, 0.03 * time);
+         mat4.translate(model, model, [0, 0.5, 0]);
+         return model;
+      }
+      buffersBench.parent = null;
+
+      buffers2.M_combined = mat4.create();
+      buffers2.createM = function (time) {
+         let model = buffers2.model;
+         mat4.fromScaling(model, [0.25, 0.25, 0.25]);
+         mat4.rotateY(model, model, 0.04 * time);
+         //mat4.rotateX(model, model, 0.03 * time);
+         mat4.translate(model, model, [4, 0, 0]);
+         return model;
+      }
+      buffers2.parent = buffersBench;
+
+      buffers3.M_combined = mat4.create();
+      buffers3.createM = function (time) {
+         let model = buffers3.model;
+         mat4.fromScaling(model, [0.25, 0.25, 0.25]);
+         mat4.rotateY(model, model, 0.05 * time);
+         //mat4.rotateZ(model, model, 0.03 * time);
+         mat4.translate(model, model, [0, 0, -2]);
+         return model;
+      }
+      buffers3.parent = buffersBench;
+
+      // Create a view matrix. glMatrix helps us here with lookAt function
+      let mirrorTest = false;
+      let M_view = mat4.create();
+      mat4.lookAt(M_view, [0, 1, 1.5], [0, 0, 0], [0, 1, 0]);
+      // mat4.lookAt(M_view, [0, -1, 1.5], [0, 0, 0], [0, 1, 0]);
+
+      let M_view_mirrored = mat4.create();
+      // mat4.lookAt(M_view_mirrored, [0, -1, 1.5], [0, 0, 0], [0, -1, 0]);
+      // mat4.lookAt(M_view_mirrored, [0, 0, 1.5], [0, 1, 0], [0, 1, 0]);
+      mat4.scale(M_view_mirrored, M_view, [1, -1, 1]);
+
+      // For verification of correct inverted camera view.
+      if (mirrorTest) {
+         mat4.lookAt(M_view, [0, 0, 1.5], [0, 1, 0], [0, 1, 0]);
+         //mat4.scale(M_view, M_view, [1, -1, 1]);
+      }
+
+      // Create a perspective matrix. glMatrix helps us here with perspective function
+      let P = mat4.create();
+      mat4.perspective(P, Math.PI / 2, canvas.width / canvas.height, .01, 10);
+
+      // Tell WebGL to use P as the GLSL uniform uPerspectiveMatrix
+      let PerspLoc = gl.getUniformLocation(shaderprogram, "uPerspectiveMatrix");
+      gl.uniformMatrix4fv(PerspLoc, false, new Float32Array(P));
+
+      // Initialise the skybox.
+      skyboxshaderprogram = createProgram(vertCodeSkybox, fragCodeSkybox);
+      let skyboxObject = cuboid(-1, 1, -1, 1, -1, 1);
+      let skyboxBuffers = initSkybox(skyboxObject, skyboxshaderprogram);
+
+      // Set the translation component to 0 as only the view direction matters for the skybox.
+      let viewDirectionMatrix = mat4.create();
+      mat4.copy(viewDirectionMatrix, M_view);
+      viewDirectionMatrix[12] = 0;
+      viewDirectionMatrix[13] = 0;
+      viewDirectionMatrix[14] = 0;
+
+      // Take the projection into account when rendering the skybox.
+      let viewDirectionProjectionMatrix = mat4.create();
+      mat4.multiply(viewDirectionProjectionMatrix, P, viewDirectionMatrix);
+
+      // Use the inverse of the view direction projection matrix to get the direction of the camera to the skybox.
+      let viewDirectionProjectionInverseMatrix = mat4.create();
+      mat4.invert(viewDirectionProjectionInverseMatrix, viewDirectionProjectionMatrix);
+
+      // Initialise the mirror.
+      let mirrorObject = plane(-1, 1, 0, -1, 1);
+      mirrorshaderprogram = createProgram(vertCodeMirror, fragCodeMirror);
+      let buffersMirror = initMirror(mirrorObject, mirrorshaderprogram);
+      buffersMirror.M_combined = mat4.create();
+      buffersMirror.createM = function (time) {
+         let model = buffersMirror.model;
+         mat4.fromScaling(model, [1, 1, 1]);
+         mat4.translate(model, model, [0, 0, 0]);
+         return model;
+      }
+      buffersMirror.parent = null;
+
+      // Initialise working matrices.
+      // This lets the objects be changed over time using additional vectors.
+      let M = mat4.create();
+      let Norm = mat4.create();
+      let MV = mat4.create();
+
+      let then = 0;
+      function render(now) {
+         let delta = 0.001 * (now - then);
+         then = now;
+         now /= 100;
+
+         // First pass.
+         {
+            // Render to the targetTexture by binding the framebuffer.
+            gl.bindFramebuffer(gl.FRAMEBUFFER, buffersMirror.framebuffer);
+
+            glInit();
+            gl.useProgram(shaderprogram);
+            gl.depthFunc(gl.LESS); // Use the default depth test for objects.
+
+            // Tell WebGL how to convert from clip space to pixels.
+            gl.viewport(0, 0, buffersMirror.targetTextureWidth, buffersMirror.targetTextureHeight);
+
+            // Tell WebGL to use M_view as the GLSL uniform uViewMatrix
+            let ViewLoc = gl.getUniformLocation(shaderprogram, "uViewMatrix");
+            gl.uniformMatrix4fv(ViewLoc, false, new Float32Array(M_view_mirrored));
+
+            for (let i = 0; i < buffers.length; i++) {
+               // Set up the Model matrix for GLSL.
+               M = returnM(buffers[i], now);
+
+               let ModelLoc = gl.getUniformLocation(shaderprogram, "uModelMatrix");
+               gl.uniformMatrix4fv(ModelLoc, false, new Float32Array(M));
+
+               // Calculate the normal matrix.
+               mat4.multiply(MV, M_view_mirrored, M);
+               mat4.transpose(Norm, MV);
+               mat4.invert(Norm, Norm);
+               let NormLoc = gl.getUniformLocation(shaderprogram, "uNormalMatrix");
+               gl.uniformMatrix4fv(NormLoc, false, new Float32Array(Norm));
+
+               // Invert the view matrix to get the transformation from view space to world space
+               let M_camera = mat4.create();
+               mat4.invert(M_camera, M_view_mirrored);
+
+               // Transform the camera position from view space to world space
+               let cameraPositionWorldSpace = vec3.create();
+               vec3.transformMat4(cameraPositionWorldSpace, [0, 0, 0], M_camera);
+
+               // Set the value of uModelCameraPosition uniform in the shader program
+               let ModelCameraLoc = gl.getUniformLocation(shaderprogram, "uModelCameraPosition");
+               gl.uniform3f(ModelCameraLoc, cameraPositionWorldSpace[0], cameraPositionWorldSpace[1], cameraPositionWorldSpace[2]);
+
+               drawObject(buffers[i], shaderprogram);
+            }
+
+            // Draw the skybox.
+            gl.depthFunc(gl.LEQUAL); // Let the skybox pass the depth test at 1.0 (edge of clip space).
+            gl.useProgram(skyboxshaderprogram);
+            let ViewDirectionProjectionInverseMatrixLoc = gl.getUniformLocation(skyboxshaderprogram, "uViewDirectionProjectionInverse");
+            gl.uniformMatrix4fv(ViewDirectionProjectionInverseMatrixLoc, false, new Float32Array(viewDirectionProjectionInverseMatrix));
+            drawSkybox(skyboxBuffers, skyboxshaderprogram);
+         }
+
+         // Second pass.
+         {
+            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
+            glInit();
+            gl.useProgram(shaderprogram);
+            gl.depthFunc(gl.LESS); // Use the default depth test for objects.
+
+            // Tell WebGL how to convert from clip space to pixels
+            gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+
+            // Tell WebGL to use M_view as the GLSL uniform uViewMatrix
+            let ViewLoc = gl.getUniformLocation(shaderprogram, "uViewMatrix");
+            gl.uniformMatrix4fv(ViewLoc, false, new Float32Array(M_view));
+
+            for (let i = 0; i < buffers.length; i++) {
+               // Set up the Model matrix for GLSL.
+               M = returnM(buffers[i], now);
+
+               let ModelLoc = gl.getUniformLocation(shaderprogram, "uModelMatrix");
+               gl.uniformMatrix4fv(ModelLoc, false, new Float32Array(M));
+
+               // Calculate the normal matrix.
+               mat4.multiply(MV, M_view, M);
+               mat4.transpose(Norm, MV);
+               mat4.invert(Norm, Norm);
+               let NormLoc = gl.getUniformLocation(shaderprogram, "uNormalMatrix");
+               gl.uniformMatrix4fv(NormLoc, false, new Float32Array(Norm));
+
+               // Invert the view matrix to get the transformation from view space to world space
+               let M_camera = mat4.create();
+               mat4.invert(M_camera, M_view);
+
+               // Transform the camera position from view space to world space
+               let cameraPositionWorldSpace = vec3.create();
+               vec3.transformMat4(cameraPositionWorldSpace, [0, 0, 0], M_camera);
+
+               // Set the value of uModelCameraPosition uniform in the shader program
+               let ModelCameraLoc = gl.getUniformLocation(shaderprogram, "uModelCameraPosition");
+               gl.uniform3f(ModelCameraLoc, cameraPositionWorldSpace[0], cameraPositionWorldSpace[1], cameraPositionWorldSpace[2]);
+
+               drawObject(buffers[i], shaderprogram);
+            }
+
+            gl.useProgram(mirrorshaderprogram);
+            // Tell WebGL to use M_view as the GLSL uniform uViewMatrix
+            let ViewLoc2 = gl.getUniformLocation(mirrorshaderprogram, "uViewMatrix");
+            gl.uniformMatrix4fv(ViewLoc2, false, new Float32Array(M_view));
+
+            // Tell WebGL to use P as the GLSL uniform uPerspectiveMatrix
+            let PerspLoc2 = gl.getUniformLocation(mirrorshaderprogram, "uPerspectiveMatrix");
+            gl.uniformMatrix4fv(PerspLoc2, false, new Float32Array(P));
+
+            // Set up the Model matrix for GLSL.
+            M = returnM(buffersMirror, now);
+
+            let ModelLoc = gl.getUniformLocation(mirrorshaderprogram, "uModelMatrix");
+            gl.uniformMatrix4fv(ModelLoc, false, new Float32Array(M));
+
+            if (!mirrorTest) {
+               drawMirror(buffersMirror, mirrorshaderprogram);
+            }
+
+            // Draw the skybox.
+            gl.depthFunc(gl.LEQUAL); // Let the skybox pass the depth test at 1.0 (edge of clip space).
+            gl.useProgram(skyboxshaderprogram);
+            let ViewDirectionProjectionInverseMatrixLoc = gl.getUniformLocation(skyboxshaderprogram, "uViewDirectionProjectionInverse");
+            gl.uniformMatrix4fv(ViewDirectionProjectionInverseMatrixLoc, false, new Float32Array(viewDirectionProjectionInverseMatrix));
+            drawSkybox(skyboxBuffers, skyboxshaderprogram);
+         }
+
+         // Request to re-run this function next time a redraw is needed.
+         requestAnimationFrame(render);
+      }
+      requestAnimationFrame(render);
+
+   </script>
+</body>
+
+</html>

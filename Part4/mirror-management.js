@@ -1,36 +1,3 @@
-function loadSkyboxTexture(shaderprogram) {
-    // ENVIRONMENT MAP
-    // Define each face of the cube map
-    const faces = [
-        'textures/lightcloud_rt.jpg',
-        'textures/lightcloud_lf.jpg',
-        'textures/lightcloud_up.jpg',
-        'textures/lightcloud_dn.jpg',
-        'textures/lightcloud_ft.jpg',
-        'textures/lightcloud_bk.jpg'
-    ];
-
-    // Create and store data into environment texture buffer
-    let environmentTexture = gl.createTexture();
-    gl.bindTexture(gl.TEXTURE_CUBE_MAP, environmentTexture);
-    faces.forEach((src, index) => {
-        const image = new Image();
-        image.addEventListener("load", function () {
-            gl.bindTexture(gl.TEXTURE_CUBE_MAP, environmentTexture);
-            gl.texImage2D(gl.TEXTURE_CUBE_MAP_POSITIVE_X + index, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
-            if (index === 5) { // If it's the last face, generate mipmaps
-                gl.generateMipmap(gl.TEXTURE_CUBE_MAP);
-            }
-        });
-        image.src = src;
-    });
-
-    // Bind the cube map texture to texture unit 1
-    const uSkyboxTextureLocation = gl.getUniformLocation(shaderprogram, "uSkyboxTexture");
-    gl.activeTexture(gl.TEXTURE1);
-    gl.uniform1i(uSkyboxTextureLocation, 1); // Set the texture unit for uSkyboxTexture
-}
-
 /**
  * This function initialises an object. It uploads all its arrays to the GPU
  * and records the references to each. We can then pass this object to drawObject
@@ -39,7 +6,7 @@ function loadSkyboxTexture(shaderprogram) {
  * @param   object         An object containing arrays for vertices, normals, and indices
  * @param   shaderprogram  a shader program returned by createProgram
  */
-function initSkybox(object, shaderprogram) {
+function initMirror(object, shaderprogram) {
     gl.useProgram(shaderprogram);
 
     // Vertices and indices arrive in the form of 2D matrix objects for ease of manipulation
@@ -63,21 +30,60 @@ function initSkybox(object, shaderprogram) {
     gl.bindTexture(gl.TEXTURE_2D, texture);
     // Fill with a single pixel so we can start rendering. This is standard approach in WebGL
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([127, 127, 255, 255]));
-
-    loadSkyboxTexture(shaderprogram);
-
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
 
     let tex_buffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, tex_buffer);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(texcoords), gl.STATIC_DRAW);
+    // Give the mirror a frame buffer.
+    // Initialise the Target Texture
+    const targetTextureWidth = 1024;
+    const targetTextureHeight = 1024;
+    const targetTexture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, targetTexture);
+
+    // define size and format of level 0
+    const level = 0;
+    const internalFormat = gl.RGBA;
+    const border = 0;
+    const format = gl.RGBA;
+    const type = gl.UNSIGNED_BYTE;
+    const data = null;
+    gl.texImage2D(gl.TEXTURE_2D, level, internalFormat,
+        targetTextureWidth, targetTextureHeight, border,
+        format, type, data);
+
+    // set the filtering so we don't need mips
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+
+    // Create and bind the framebuffer
+    const framebuffer = gl.createFramebuffer();
+    gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+
+    // attach the texture as the first color attachment
+    const attachmentPoint = gl.COLOR_ATTACHMENT0;
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, attachmentPoint, gl.TEXTURE_2D, targetTexture, level);
+
+    // create a depth renderbuffer
+    const depthBuffer = gl.createRenderbuffer();
+    gl.bindRenderbuffer(gl.RENDERBUFFER, depthBuffer);
+
+    // make a depth buffer and the same size as the targetTexture
+    gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16, targetTextureWidth, targetTextureHeight);
+    gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, depthBuffer);
 
     return {
         vertex_buffer: vertex_buffer,
         index_buffer: index_buffer,
         tex_buffer: tex_buffer,
         numVertices: indices.length,
-        model: mat4.create()
+        model: mat4.create(),
+        texture: targetTexture,
+        framebuffer: framebuffer,
+        targetTextureWidth: targetTextureWidth,
+        targetTextureHeight: targetTextureHeight,
     };
 }
 
@@ -87,11 +93,13 @@ function initSkybox(object, shaderprogram) {
  * @param   bufferObject   An object returned by initObject
  * @param   shaderprogram  a shader program returned by createProgram
  */
-function drawSkybox(bufferObject, shaderprogram) {
+function drawMirror(bufferObject, shaderprogram) {
+
     gl.useProgram(shaderprogram);
 
     let vertex_buffer = bufferObject.vertex_buffer;
     let index_buffer = bufferObject.index_buffer;
+    let tex_buffer = bufferObject.tex_buffer;
     let number = bufferObject.numVertices;
 
     // Bind buffers
@@ -101,6 +109,13 @@ function drawSkybox(bufferObject, shaderprogram) {
     gl.enableVertexAttribArray(aPosition);
 
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, index_buffer);
+
+    gl.bindTexture(gl.TEXTURE_2D, bufferObject.texture);
+    let aTexCoord = gl.getAttribLocation(shaderprogram, "aTexCoord");
+    gl.bindBuffer(gl.ARRAY_BUFFER, tex_buffer);
+    gl.vertexAttribPointer(aTexCoord, 2, gl.FLOAT, false, 0, 0);
+    gl.enableVertexAttribArray(aTexCoord);
+
 
     // Draw elements as triangles
     gl.drawElements(gl.TRIANGLES, number, gl.UNSIGNED_SHORT, 0);

@@ -3,7 +3,7 @@
  * and records the references to each. We can then pass this object to drawObject
  * which will bind the arrays appropriately
  * 
- * @param   object         An object containing arrays for vertices, colors, normals, and indices
+ * @param   object         An object containing arrays for vertices, normals, and indices
  * @param   shaderprogram  a shader program returned by createProgram
  */
 function initObject(object, shaderprogram) {

@@ -1,7 +1,7 @@
 /**
  * Create a cube we can play with
  * 
- * @returns    object consisting of three matrices: vertices, colors and indices
+ * @returns    object consisting of three matrices: vertices and indices
  */
 function cube() {
     return cuboid(-0.5, 0.5, -0.5, 0.5, -0.5, 0.5);
@@ -12,15 +12,6 @@ function cuboid(left, right, bottom, top, back, front) {
     // We use 4 vertices per face below. We duplicate vertices so each
     // face has its own 4 vertices. This means 24 vertices below
     // (6 faces * 4 vertices)
-
-    let [leftCol, rightCol, bottomCol, topCol, backCol, frontCol] = [
-        [1, 0, 0, 1],    // First face - Left face - red
-        [1, 1, 0, 1],    // Second face - Right face - yellow 
-        [0, 0, 1, 1],    // Third face - Bottom face - blue 
-        [0, 1, 1, 1],    // Fourth face - Top face - cyan
-        [1, 0, 1, 1],    // Fifth face - Back face - purple
-        [1, 1, 1, 1],    // Sixth face - Front face - white            
-    ];
 
     let vertices = [     // 24 vertices defining the cube - Front and back modified to match camera.
         [left, bottom, back, 1], // First face - Left face
@@ -88,12 +79,12 @@ function cuboid(left, right, bottom, top, back, front) {
     // Expected order to match vertices for texture wrap.
     // Bottom Left, Top Left, Top Right, Bottom Right
     // let texcoords = [
-    //    [x1, y2], [x1, y3], [x2, y3], [x2, y2], // Left
-    //    [x3, y2], [x3, y3], [x4, y3], [x4, y2], // Right
-    //    [x2, y1], [x2, y2], [x3, y2], [x3, y1], // Bottom
-    //    [x2, y3], [x2, y4], [x3, y4], [x3, y3], // Top
-    //    [x4, y2], [x4, y3], [x5, y3], [x5, y2], // Back
-    //    [x2, y2], [x2, y3], [x3, y3], [x3, y2], // Front
+    //     [x1, y2], [x1, y3], [x2, y3], [x2, y2], // Left
+    //     [x3, y2], [x3, y3], [x4, y3], [x4, y2], // Right
+    //     [x2, y1], [x2, y2], [x3, y2], [x3, y1], // Bottom
+    //     [x2, y3], [x2, y4], [x3, y4], [x3, y3], // Top
+    //     [x4, y2], [x4, y3], [x5, y3], [x5, y2], // Back
+    //     [x2, y2], [x2, y3], [x3, y3], [x3, y2], // Front
     // ];
 
     // Working coordinates for full texture on each face.
@@ -109,43 +100,22 @@ function cuboid(left, right, bottom, top, back, front) {
 
     // Working coordinates to match vertices for texture wrap.
     // Reverse order of vertices plus flips for top and bottom.
+    // let texcoords = [
+    //     [x2, y2], [x2, y3], [x1, y3], [x1, y2], // Left
+    //     [x4, y2], [x4, y3], [x3, y3], [x3, y2], // Right
+    //     [x2, y2], [x2, y1], [x3, y1], [x3, y2], // Bottom
+    //     [x2, y4], [x2, y3], [x3, y3], [x3, y4], // Top
+    //     [x5, y2], [x5, y3], [x4, y3], [x4, y2], // Back
+    //     [x3, y2], [x3, y3], [x2, y3], [x2, y2], // Front
+    // ];
+
     let texcoords = [
-        [x2, y2], [x2, y3], [x1, y3], [x1, y2], // Left
-        [x4, y2], [x4, y3], [x3, y3], [x3, y2], // Right
-        [x2, y2], [x2, y1], [x3, y1], [x3, y2], // Bottom
-        [x2, y4], [x2, y3], [x3, y3], [x3, y4], // Top
-        [x5, y2], [x5, y3], [x4, y3], [x4, y2], // Back
-        [x3, y2], [x3, y3], [x2, y3], [x2, y2], // Front
-    ];
-
-    // We define 24 colours (one colour per vertex). We group them by faces;
-    // sets of four vertices belonging to the same face get the same colour   
-
-    let colors = [
-        leftCol,
-        leftCol,
-        leftCol,
-        leftCol,
-        rightCol,
-        rightCol,
-        rightCol,
-        rightCol,
-        bottomCol,
-        bottomCol,
-        bottomCol,
-        bottomCol,
-        topCol,
-        topCol,
-        topCol,
-        topCol,
-        backCol,
-        backCol,
-        backCol,
-        backCol,
-        frontCol,
-        frontCol,
-        frontCol,
-        frontCol
+        [x1, y2], [x1, y3], [x2, y3], [x2, y2], // Left
+        [x3, y2], [x3, y3], [x4, y3], [x4, y2], // Right
+        [x2, y1], [x2, y2], [x3, y2], [x3, y1], // Bottom
+        [x2, y3], [x2, y4], [x3, y4], [x3, y3], // Top
+        [x2, y2], [x2, y3], [x3, y3], [x3, y2], // Front
+        [x4, y2], [x4, y3], [x5, y3], [x5, y2], // Back
     ];
 
     let normals = [     // 24 vertices defining the cube
@@ -177,7 +147,6 @@ function cuboid(left, right, bottom, top, back, front) {
 
     return {
         vertices: vertices,
-        colors: colors,
         indices: indices,
         normals: normals,
         texcoords: texcoords
@@ -367,37 +336,6 @@ function line(op1, op2, height, depth) {
         [x3, y2], [x3, y3], [x2, y3], [x2, y2], // Front
     ];
 
-    // We define 24 colours (one colour per vertex). We group them by faces;
-    // sets of four vertices belonging to the same face get the same colour   
-
-    let colors = [
-        leftCol,
-        leftCol,
-        leftCol,
-        leftCol,
-        rightCol,
-        rightCol,
-        rightCol,
-        rightCol,
-        bottomCol,
-        bottomCol,
-        bottomCol,
-        bottomCol,
-        topCol,
-        topCol,
-        topCol,
-        topCol,
-        backCol,
-        backCol,
-        backCol,
-        backCol,
-        frontCol,
-        frontCol,
-        frontCol,
-        frontCol
-    ];
-
-
     let normalDepth = vec3.create();
     vec3.normalize(normalDepth, crossDepth);
     let normalHeight = vec3.create();
@@ -446,7 +384,6 @@ function line(op1, op2, height, depth) {
 
     return {
         vertices: vertices,
-        colors: colors,
         indices: indices,
         normals: normals,
         texcoords: texcoords
@@ -455,7 +392,6 @@ function line(op1, op2, height, depth) {
 
 function combineShapes(shapes) {
     let combinedVertices = [];
-    let combinedColors = [];
     let combinedIndices = [];
     let combinedNormals = [];
     let combinedTexcoords = [];
@@ -464,7 +400,6 @@ function combineShapes(shapes) {
 
     for (let shape of shapes) {
         combinedVertices.push(...shape.vertices);
-        combinedColors.push(...shape.colors);
         combinedNormals.push(...shape.normals);
         combinedTexcoords.push(...shape.texcoords);
 
@@ -478,7 +413,6 @@ function combineShapes(shapes) {
 
     return {
         vertices: combinedVertices,
-        colors: combinedColors,
         indices: combinedIndices,
         normals: combinedNormals,
         texcoords: combinedTexcoords
@@ -492,24 +426,6 @@ function bench() {
     let rightLeg = cuboid(xExtent - xExtent / 2, xExtent - xExtent / 6, -3 * yExtent, -yExtent, -0.8 * zExtent, 0.8 * zExtent);
 
     return combineShapes([top, leftLeg, rightLeg]);
-
-    // // Increment indices in leftLeg using the top vertices as an offset.
-    // const leftLegOffset = top.vertices.length;
-    // leftLeg.indices = leftLeg.indices.map(index =>
-    //     [index[0] + leftLegOffset, index[1] + leftLegOffset, index[2] + leftLegOffset]);
-
-    // // Increment indices in rightLeg using the other two sets of vertices as an offset.
-    // const rightLegOffset = top.vertices.length + leftLeg.vertices.length;
-    // rightLeg.indices = rightLeg.indices.map(index =>
-    //     [index[0] + rightLegOffset, index[1] + rightLegOffset, index[2] + rightLegOffset]);
-
-    // return {
-    //     vertices: [...top.vertices, ...leftLeg.vertices, ...rightLeg.vertices],
-    //     colors: [...top.colors, ...leftLeg.colors, ...rightLeg.colors],
-    //     indices: [...top.indices, ...leftLeg.indices, ...rightLeg.indices],
-    //     normals: [...top.normals, ...leftLeg.normals, ...rightLeg.normals],
-    //     texcoords: [...top.texcoords, ...leftLeg.texcoords, ...rightLeg.texcoords]
-    // };
 }
 
 function flower() {
@@ -529,4 +445,32 @@ function lamppost() {
     let post = cuboid(-xExtent, xExtent, -yExtent, 2.5 * yExtent, -zExtent, zExtent);
     let lamp = cuboid(-0.999 * xExtent, 6 * xExtent, 2.25 * yExtent, 2.499 * yExtent, -0.999 * zExtent, 0.999 * zExtent);
     return combineShapes([base, post, lamp]);
+}
+
+function plane(left, right, y, back, front) {
+    let vertices = [
+        [left, y, front, 1],
+        [left, y, back, 1],
+        [right, y, back, 1],
+        [right, y, front, 1],
+    ];
+
+    let indices = [
+        [0, 1, 2],
+        [0, 2, 3],
+    ];
+
+    let minX = 0;
+    let maxX = 1;
+    let minY = 0;
+    let maxY = 1;
+    let texcoords = [
+        [minX, minY], [minX, maxY], [maxX, maxY], [maxX, minY],
+    ];
+
+    return {
+        vertices: vertices,
+        indices: indices,
+        texcoords: texcoords
+    };
 }
