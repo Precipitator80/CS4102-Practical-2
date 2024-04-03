@@ -115,6 +115,9 @@
       let viewDirectionProjectionInverseMatrix = mat4.create();
       mat4.invert(viewDirectionProjectionInverseMatrix, viewDirectionProjectionMatrix);
 
+      let ViewDirectionProjectionInverseMatrixLoc = gl.getUniformLocation(skyboxshaderprogram, "uViewDirectionProjectionInverse");
+      gl.uniformMatrix4fv(ViewDirectionProjectionInverseMatrixLoc, false, new Float32Array(viewDirectionProjectionInverseMatrix));
+
       // Initialise working matrices.
       // This lets the objects be changed over time using additional vectors.
       let M = mat4.create();
@@ -161,9 +164,6 @@
 
          // Draw the skybox.
          gl.depthFunc(gl.LEQUAL); // Let the skybox pass the depth test at 1.0 (edge of clip space).
-         gl.useProgram(skyboxshaderprogram);
-         let ViewDirectionProjectionInverseMatrixLoc = gl.getUniformLocation(skyboxshaderprogram, "uViewDirectionProjectionInverse");
-         gl.uniformMatrix4fv(ViewDirectionProjectionInverseMatrixLoc, false, new Float32Array(viewDirectionProjectionInverseMatrix));
          drawSkybox(skyboxBuffers, skyboxshaderprogram);
 
          // Request to re-run this function next time a redraw is needed.
