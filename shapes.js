@@ -546,12 +546,18 @@ function plane(left, right, y, back, front, M, V_Mirrored, P) {
     let tc19 = [(tc3[0] + tc4[0]) / 2, tc3[0]];
     let tc20 = [(tc3[0] + tc4[0]) / 2, tc2[0]];
 
+    let tc21 = [(tc1[0] + tc2[0]) / 2, 1 - tc2[1]];
+    let tc22 = [(tc1[0] + tc2[0]) / 2, 1 - tc1[1]];
+    let tc23 = [(tc3[0] + tc4[0]) / 2, 1 - tc4[1]];
+    let tc24 = [(tc3[0] + tc4[0]) / 2, 1 - tc3[1]];
+
     let texcoords = [
         // tc1, tc2, tc3, tc4,
         // tc5, tc6, tc7, tc8,
         tc9, tc10, tc11, tc12,
         // tc13, tc14, tc15, tc16,
         // tc17, tc18, tc19, tc20,
+        // tc21, tc22, tc23, tc24,
     ];
 
     // console.log("Point 1 Alt: " + tc5);
@@ -569,6 +575,11 @@ function plane(left, right, y, back, front, M, V_Mirrored, P) {
     // console.log("Point 2 Alt3: " + tc18);
     // console.log("Point 3 Alt3: " + tc19);
     // console.log("Point 4 Alt3: " + tc20);
+
+    // console.log("Point 1 Alt4: " + tc21);
+    // console.log("Point 2 Alt4: " + tc22);
+    // console.log("Point 3 Alt4: " + tc23);
+    // console.log("Point 4 Alt4: " + tc24);
 
     // let normals = [
     //     [0, 1, 0, 0],
