@@ -86,12 +86,17 @@
       // Create a view matrix. glMatrix helps us here with lookAt function
       let mirroredView = false;
       let drawMirrorBool = true;
+      let framebufferView = false;
       let M_view = mat4.create();
-      mat4.lookAt(M_view, [0, 1, 1.5], [0, 0, 0], [0, 1, 0]);
-
       let M_view_mirrored = mat4.create();
-      // mat4.lookAt(M_view_mirrored, [0, -1, 1.5], [0, 0, 0], [0, -1, 0]);
+
+      mat4.lookAt(M_view, [0, 1, 1.5], [0, 0, 0], [0, 1, 0]);
       mat4.scale(M_view_mirrored, M_view, [1, -1, 1]);
+
+      if (framebufferView) {
+         mat4.lookAt(M_view, [0, -1, 0], [0, 0, 0], [0, 0, -1]);
+         mat4.lookAt(M_view_mirrored, [0, -1, 1.5], [0, 0, 0], [0, -1, 0]);
+      }
 
       // For verification of correct inverted camera view.
       if (mirroredView) {
