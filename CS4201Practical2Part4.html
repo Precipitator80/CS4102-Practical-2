@@ -56,7 +56,7 @@
          let model = buffersBench.model;
          mat4.fromScaling(model, [1, 1, 1]);
          mat4.rotateY(model, model, 0.03 * time);
-         mat4.translate(model, model, [0, 0.5, 0]);
+         mat4.translate(model, model, [0, 0.375, 0]); // Sit just on the mirror.
          return model;
       }
       buffersBench.parent = null;
@@ -78,26 +78,25 @@
          mat4.fromScaling(model, [0.25, 0.25, 0.25]);
          mat4.rotateY(model, model, 0.05 * time);
          //mat4.rotateZ(model, model, 0.03 * time);
-         mat4.translate(model, model, [0, 0, -2]);
+         mat4.translate(model, model, [0, 1, -3]);
          return model;
       }
       buffers3.parent = buffersBench;
 
       // Create a view matrix. glMatrix helps us here with lookAt function
-      let mirrorTest = false;
+      let mirroredView = false;
+      let drawMirrorBool = true;
       let M_view = mat4.create();
       mat4.lookAt(M_view, [0, 1, 1.5], [0, 0, 0], [0, 1, 0]);
-      // mat4.lookAt(M_view, [0, -1, 1.5], [0, 0, 0], [0, 1, 0]);
 
       let M_view_mirrored = mat4.create();
       // mat4.lookAt(M_view_mirrored, [0, -1, 1.5], [0, 0, 0], [0, -1, 0]);
-      // mat4.lookAt(M_view_mirrored, [0, 0, 1.5], [0, 1, 0], [0, 1, 0]);
       mat4.scale(M_view_mirrored, M_view, [1, -1, 1]);
 
       // For verification of correct inverted camera view.
-      if (mirrorTest) {
-         mat4.lookAt(M_view, [0, 0, 1.5], [0, 1, 0], [0, 1, 0]);
-         //mat4.scale(M_view, M_view, [1, -1, 1]);
+      if (mirroredView) {
+         // mat4.lookAt(M_view, [0, -1, 1.5], [0, 0, 0], [0, 1, 0]);
+         mat4.copy(M_view, M_view_mirrored);
       }
 
       // Create a perspective matrix. glMatrix helps us here with perspective function
@@ -112,7 +111,9 @@
       skyboxshaderprogram = createProgram(vertCodeSkybox, fragCodeSkybox);
       let skyboxObject = cuboid(-1, 1, -1, 1, -1, 1);
       let skyboxBuffers = initSkybox(skyboxObject, skyboxshaderprogram);
+      let ViewDirectionProjectionInverseMatrixLoc = gl.getUniformLocation(skyboxshaderprogram, "uViewDirectionProjectionInverse");
 
+      //// NORMAL SKYBOX.
       // Set the translation component to 0 as only the view direction matters for the skybox.
       let viewDirectionMatrix = mat4.create();
       mat4.copy(viewDirectionMatrix, M_view);
@@ -128,11 +129,24 @@
       let viewDirectionProjectionInverseMatrix = mat4.create();
       mat4.invert(viewDirectionProjectionInverseMatrix, viewDirectionProjectionMatrix);
 
-      let ViewDirectionProjectionInverseMatrixLoc = gl.getUniformLocation(skyboxshaderprogram, "uViewDirectionProjectionInverse");
-      gl.uniformMatrix4fv(ViewDirectionProjectionInverseMatrixLoc, false, new Float32Array(viewDirectionProjectionInverseMatrix));
+      //// MIRRORED SKYBOX.
+      // Set the translation component to 0 as only the view direction matters for the skybox.
+      let viewDirectionMatrix_mirrored = mat4.create();
+      mat4.copy(viewDirectionMatrix_mirrored, M_view_mirrored);
+      viewDirectionMatrix_mirrored[12] = 0;
+      viewDirectionMatrix_mirrored[13] = 0;
+      viewDirectionMatrix_mirrored[14] = 0;
+
+      // Take the projection into account when rendering the skybox.
+      let viewDirectionProjectionMatrix_mirrored = mat4.create();
+      mat4.multiply(viewDirectionProjectionMatrix_mirrored, P, viewDirectionMatrix_mirrored);
+
+      // Use the inverse of the view direction projection matrix to get the direction of the camera to the skybox.
+      let viewDirectionProjectionInverseMatrix_mirrored = mat4.create();
+      mat4.invert(viewDirectionProjectionInverseMatrix_mirrored, viewDirectionProjectionMatrix_mirrored);
 
       // Initialise the mirror.
-      let mirrorObject = plane(-1, 1, 0, -1, 1);
+      let mirrorObject = plane(-1, 1, 0, -1, 1, mat4.create(), M_view_mirrored, P);
       mirrorshaderprogram = createProgram(vertCodeMirror, fragCodeMirror);
       let buffersMirror = initMirror(mirrorObject, mirrorshaderprogram);
       buffersMirror.M_combined = mat4.create();
@@ -202,7 +216,9 @@
             }
 
             // Draw the skybox.
+            gl.useProgram(skyboxshaderprogram);
             gl.depthFunc(gl.LEQUAL); // Let the skybox pass the depth test at 1.0 (edge of clip space).
+            gl.uniformMatrix4fv(ViewDirectionProjectionInverseMatrixLoc, false, new Float32Array(viewDirectionProjectionInverseMatrix_mirrored));
             drawSkybox(skyboxBuffers, skyboxshaderprogram);
          }
 
@@ -265,12 +281,33 @@
             let ModelLoc = gl.getUniformLocation(mirrorshaderprogram, "uModelMatrix");
             gl.uniformMatrix4fv(ModelLoc, false, new Float32Array(M));
 
-            if (!mirrorTest) {
+            // // Calculate the normal matrix.
+            // mat4.multiply(MV, M_view, M);
+            // mat4.transpose(Norm, MV);
+            // mat4.invert(Norm, Norm);
+            // let NormLoc = gl.getUniformLocation(mirrorshaderprogram, "uNormalMatrix");
+            // gl.uniformMatrix4fv(NormLoc, false, new Float32Array(Norm));
+
+            // // Invert the view matrix to get the transformation from view space to world space
+            // let M_camera = mat4.create();
+            // mat4.invert(M_camera, M_view);
+
+            // // Transform the camera position from view space to world space
+            // let cameraPositionWorldSpace = vec3.create();
+            // vec3.transformMat4(cameraPositionWorldSpace, [0, 0, 0], M_camera);
+
+            // // Set the value of uModelCameraPosition uniform in the shader program
+            // let ModelCameraLoc = gl.getUniformLocation(mirrorshaderprogram, "uModelCameraPosition");
+            // gl.uniform3f(ModelCameraLoc, cameraPositionWorldSpace[0], cameraPositionWorldSpace[1], cameraPositionWorldSpace[2]);
+
+            if (drawMirrorBool) {
                drawMirror(buffersMirror, mirrorshaderprogram);
             }
 
             // Draw the skybox.
+            gl.useProgram(skyboxshaderprogram);
             gl.depthFunc(gl.LEQUAL); // Let the skybox pass the depth test at 1.0 (edge of clip space).
+            gl.uniformMatrix4fv(ViewDirectionProjectionInverseMatrixLoc, false, new Float32Array(viewDirectionProjectionInverseMatrix));
             drawSkybox(skyboxBuffers, skyboxshaderprogram);
          }
 

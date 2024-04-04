@@ -447,7 +447,7 @@ function lamppost() {
     return combineShapes([base, post, lamp]);
 }
 
-function plane(left, right, y, back, front) {
+function plane(left, right, y, back, front, M, V_Mirrored, P) {
     let vertices = [
         [left, y, front, 1],
         [left, y, back, 1],
@@ -460,17 +460,127 @@ function plane(left, right, y, back, front) {
         [0, 2, 3],
     ];
 
-    let minX = 0;
-    let maxX = 1;
-    let minY = 0;
-    let maxY = 1;
+    let v1 = vec4.fromValues(left, y, front, 1);
+    let v2 = vec4.fromValues(left, y, back, 1);
+    let v3 = vec4.fromValues(right, y, back, 1);
+    let v4 = vec4.fromValues(right, y, front, 1);
+
+    console.log("Original vertices:\n" + v1 + "\n" + v2 + "\n" + v3 + "\n" + v4);
+
+    vec4.transformMat4(v1, v1, M);
+    vec4.transformMat4(v2, v2, M);
+    vec4.transformMat4(v3, v3, M);
+    vec4.transformMat4(v4, v4, M);
+
+    console.log("M: " + M);
+    console.log("Transformed vertices (After Model):\n" + v1 + "\n" + v2 + "\n" + v3 + "\n" + v4);
+
+    vec4.transformMat4(v1, v1, V_Mirrored);
+    vec4.transformMat4(v2, v2, V_Mirrored);
+    vec4.transformMat4(v3, v3, V_Mirrored);
+    vec4.transformMat4(v4, v4, V_Mirrored);
+
+    console.log("V_Mirrored: " + V_Mirrored);
+    console.log("Transformed vertices (After View):\n" + v1 + "\n" + v2 + "\n" + v3 + "\n" + v4);
+
+    // Apply perspective.
+    vec4.transformMat4(v1, v1, P);
+    vec4.transformMat4(v2, v2, P);
+    vec4.transformMat4(v3, v3, P);
+    vec4.transformMat4(v4, v4, P);
+
+    // Normalise perspective.
+    vec4.divide(v1, v1, [v1[3], v1[3], v1[3], v1[3]]);
+    vec4.divide(v2, v2, [v2[3], v2[3], v2[3], v2[3]]);
+    vec4.divide(v3, v3, [v3[3], v3[3], v3[3], v3[3]]);
+    vec4.divide(v4, v4, [v4[3], v4[3], v4[3], v4[3]]);
+
+    console.log("P: " + P);
+    console.log("Transformed vertices (After Perspective):\n" + v1 + "\n" + v2 + "\n" + v3 + "\n" + v4);
+
+    // Map to texture coordinates.
+    vec4.add(v1, v1, [1, 1, 0, 0]);
+    vec4.add(v2, v2, [1, 1, 0, 0]);
+    vec4.add(v3, v3, [1, 1, 0, 0]);
+    vec4.add(v4, v4, [1, 1, 0, 0]);
+
+    vec4.divide(v1, v1, [2, 2, 1, 1]);
+    vec4.divide(v2, v2, [2, 2, 1, 1]);
+    vec4.divide(v3, v3, [2, 2, 1, 1]);
+    vec4.divide(v4, v4, [2, 2, 1, 1]);
+
+    console.log("Transformed vertices (After TC):\n" + v1 + "\n" + v2 + "\n" + v3 + "\n" + v4);
+
+    let tc1 = [v1[0], v1[1]];
+    let tc2 = [v2[0], v2[1]];
+    let tc3 = [v3[0], v3[1]];
+    let tc4 = [v4[0], v4[1]];
+
+    console.log("Point 1: " + tc1);
+    console.log("Point 2: " + tc2);
+    console.log("Point 3: " + tc3);
+    console.log("Point 4: " + tc4);
+
+    let minX = tc3[0] + 0.115;//0.3;
+    let maxX = tc2[0] - 0.115;
+    let minY = tc4[1] + 0.105;
+    let maxY = tc3[1] + 0.065;
+
+    let tc5 = [minX, maxY];
+    let tc6 = [minX, minY];
+    let tc7 = [maxX, minY];
+    let tc8 = [maxX, maxY];
+
+    let tc9 = [maxX, tc2[0]];
+    let tc10 = [maxX, tc3[0]];
+    let tc11 = [minX, tc3[0]];
+    let tc12 = [minX, tc2[0]];
+
+    let tc13 = [0, 0];
+    let tc14 = [0, 1];
+    let tc15 = [1, 1];
+    let tc16 = [1, 0];
+
+    let tc17 = [(tc1[0] + tc2[0]) / 2, tc2[0]];
+    let tc18 = [(tc1[0] + tc2[0]) / 2, tc3[0]];
+    let tc19 = [(tc3[0] + tc4[0]) / 2, tc3[0]];
+    let tc20 = [(tc3[0] + tc4[0]) / 2, tc2[0]];
+
     let texcoords = [
-        [minX, minY], [minX, maxY], [maxX, maxY], [maxX, minY],
+        // tc1, tc2, tc3, tc4,
+        // tc5, tc6, tc7, tc8,
+        tc9, tc10, tc11, tc12,
+        // tc13, tc14, tc15, tc16,
+        // tc17, tc18, tc19, tc20,
     ];
+
+    // console.log("Point 1 Alt: " + tc5);
+    // console.log("Point 2 Alt: " + tc6);
+    // console.log("Point 3 Alt: " + tc7);
+    // console.log("Point 4 Alt: " + tc8);
+
+
+    console.log("Point 1 Alt2: " + tc9);
+    console.log("Point 2 Alt2: " + tc10);
+    console.log("Point 3 Alt2: " + tc11);
+    console.log("Point 4 Alt2: " + tc12);
+
+    // console.log("Point 1 Alt3: " + tc17);
+    // console.log("Point 2 Alt3: " + tc18);
+    // console.log("Point 3 Alt3: " + tc19);
+    // console.log("Point 4 Alt3: " + tc20);
+
+    // let normals = [
+    //     [0, 1, 0, 0],
+    //     [0, 1, 0, 0],
+    //     [0, 1, 0, 0],
+    //     [0, 1, 0, 0],
+    // ];
 
     return {
         vertices: vertices,
         indices: indices,
+        // normals: normals,
         texcoords: texcoords
     };
 }

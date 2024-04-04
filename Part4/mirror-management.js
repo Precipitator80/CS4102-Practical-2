@@ -13,6 +13,7 @@ function initMirror(object, shaderprogram) {
     // We need to flatten them and convert them to JS arrays before passing them to WebGL
     let vertices = object.vertices.flat();
     let indices = object.indices.flat();
+    // let normals = object.normals.flat();
     let texcoords = object.texcoords.flat();
 
     // Create and store data into vertex buffer
@@ -24,6 +25,11 @@ function initMirror(object, shaderprogram) {
     let index_buffer = gl.createBuffer();
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, index_buffer);
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
+
+    // // Create and store data into normal buffer
+    // let normal_buffer = gl.createBuffer();
+    // gl.bindBuffer(gl.ARRAY_BUFFER, normal_buffer);
+    // gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(normals), gl.STATIC_DRAW);
 
     // Create and store data into texture buffer
     let texture = gl.createTexture();
@@ -76,6 +82,7 @@ function initMirror(object, shaderprogram) {
 
     return {
         vertex_buffer: vertex_buffer,
+        // normal_buffer: normal_buffer,
         index_buffer: index_buffer,
         tex_buffer: tex_buffer,
         numVertices: indices.length,

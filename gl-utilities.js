@@ -11,29 +11,38 @@ function glInit() {
 }
 
 /**
-* This function compiles the supplied vertex and fragment shaders into a program
-* 
-* @param   vertCode  Vertex shader code, written in GLSL
-* @param   fragCode  Fragment shader code, written in GLSL
-* 
-* @returns    Shader program
-*/
+ * This function compiles the supplied vertex and fragment shaders into a program
+ * 
+ * @param {string} vertCode Vertex shader code, written in GLSL
+ * @param {string} fragCode Fragment shader code, written in GLSL
+ * 
+ * @returns {WebGLProgram} Shader program
+ */
 function createProgram(vertCode, fragCode) {
     // Compile and upload shader programs
     let vertShader = gl.createShader(gl.VERTEX_SHADER);
     gl.shaderSource(vertShader, vertCode);
     gl.compileShader(vertShader);
+    if (!gl.getShaderParameter(vertShader, gl.COMPILE_STATUS)) {
+        throw new Error('Vertex shader compilation failed: ' + gl.getShaderInfoLog(vertShader));
+    }
 
     let fragShader = gl.createShader(gl.FRAGMENT_SHADER);
     gl.shaderSource(fragShader, fragCode);
     gl.compileShader(fragShader);
+    if (!gl.getShaderParameter(fragShader, gl.COMPILE_STATUS)) {
+        throw new Error('Fragment shader compilation failed: ' + gl.getShaderInfoLog(fragShader));
+    }
 
-    let shaderprogram = gl.createProgram();
-    gl.attachShader(shaderprogram, vertShader);
-    gl.attachShader(shaderprogram, fragShader);
-    gl.linkProgram(shaderprogram);
+    let shaderProgram = gl.createProgram();
+    gl.attachShader(shaderProgram, vertShader);
+    gl.attachShader(shaderProgram, fragShader);
+    gl.linkProgram(shaderProgram);
+    if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
+        throw new Error('Shader program linking failed: ' + gl.getProgramInfoLog(shaderProgram));
+    }
 
-    gl.useProgram(shaderprogram);
+    gl.useProgram(shaderProgram);
 
-    return shaderprogram;
+    return shaderProgram;
 }
