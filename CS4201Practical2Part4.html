@@ -153,7 +153,7 @@
       // Initialise the mirror.
       let mirrorObject = plane(-1, 1, 0, -1, 1, mat4.create(), M_view_mirrored, P);
       mirrorshaderprogram = createProgram(vertCodeMirror, fragCodeMirror);
-      let buffersMirror = initMirror(mirrorObject, mirrorshaderprogram);
+      let buffersMirror = initMirror(mirrorObject, mirrorshaderprogram, canvas);
       buffersMirror.M_combined = mat4.create();
       buffersMirror.createM = function (time) {
          let model = buffersMirror.model;
@@ -286,24 +286,8 @@
             let ModelLoc = gl.getUniformLocation(mirrorshaderprogram, "uModelMatrix");
             gl.uniformMatrix4fv(ModelLoc, false, new Float32Array(M));
 
-            // // Calculate the normal matrix.
-            // mat4.multiply(MV, M_view, M);
-            // mat4.transpose(Norm, MV);
-            // mat4.invert(Norm, Norm);
-            // let NormLoc = gl.getUniformLocation(mirrorshaderprogram, "uNormalMatrix");
-            // gl.uniformMatrix4fv(NormLoc, false, new Float32Array(Norm));
-
-            // // Invert the view matrix to get the transformation from view space to world space
-            // let M_camera = mat4.create();
-            // mat4.invert(M_camera, M_view);
-
-            // // Transform the camera position from view space to world space
-            // let cameraPositionWorldSpace = vec3.create();
-            // vec3.transformMat4(cameraPositionWorldSpace, [0, 0, 0], M_camera);
-
-            // // Set the value of uModelCameraPosition uniform in the shader program
-            // let ModelCameraLoc = gl.getUniformLocation(mirrorshaderprogram, "uModelCameraPosition");
-            // gl.uniform3f(ModelCameraLoc, cameraPositionWorldSpace[0], cameraPositionWorldSpace[1], cameraPositionWorldSpace[2]);
+            let ResLoc = gl.getUniformLocation(mirrorshaderprogram, "uResolution");
+            gl.uniform2f(ResLoc, canvas.width, canvas.height);
 
             if (drawMirrorBool) {
                drawMirror(buffersMirror, mirrorshaderprogram);

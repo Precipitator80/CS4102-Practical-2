@@ -6,7 +6,7 @@
  * @param   object         An object containing arrays for vertices, normals, and indices
  * @param   shaderprogram  a shader program returned by createProgram
  */
-function initMirror(object, shaderprogram) {
+function initMirror(object, shaderprogram, canvas) {
     gl.useProgram(shaderprogram);
 
     // Vertices and indices arrive in the form of 2D matrix objects for ease of manipulation
@@ -43,8 +43,8 @@ function initMirror(object, shaderprogram) {
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(texcoords), gl.STATIC_DRAW);
     // Give the mirror a frame buffer.
     // Initialise the Target Texture
-    const targetTextureWidth = 1024;
-    const targetTextureHeight = 1024;
+    const targetTextureWidth = canvas.width;
+    const targetTextureHeight = canvas.height;
     const targetTexture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, targetTexture);
 
@@ -118,10 +118,7 @@ function drawMirror(bufferObject, shaderprogram) {
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, index_buffer);
 
     gl.bindTexture(gl.TEXTURE_2D, bufferObject.texture);
-    let aTexCoord = gl.getAttribLocation(shaderprogram, "aTexCoord");
     gl.bindBuffer(gl.ARRAY_BUFFER, tex_buffer);
-    gl.vertexAttribPointer(aTexCoord, 2, gl.FLOAT, false, 0, 0);
-    gl.enableVertexAttribArray(aTexCoord);
 
 
     // Draw elements as triangles
